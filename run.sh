@@ -71,7 +71,28 @@ run_commands() {
   npm start
 
   echo ""
-  read -p "✅ Selesai! Tekan Enter untuk keluar..."
+  echo "✅ Skrip utama selesai."
+  echo ""
+  echo "============================================="
+  echo "🔄 2. Menjalankan Recount Number of Instances (Clean up)..."
+  echo "============================================="
+
+  RECOUNT_SCRIPT="./scripts/clean_data/recount_instances.js"
+
+  if [ -f "$RECOUNT_SCRIPT" ]; then
+    node "$RECOUNT_SCRIPT"
+    
+    if [ $? -eq 0 ]; then
+      echo "✅ Selesai Recount."
+    else
+      echo "⚠️  PERINGATAN: Skrip recount gagal. Cek log di atas."
+    fi
+  else
+    echo "⚠️  PERINGATAN: Skrip ${RECOUNT_SCRIPT} tidak ditemukan. Melewatkan..."
+  fi
+  
+  echo ""
+  read -p "✅ Semua proses selesai! Tekan Enter untuk keluar..."
 }
 
 run_commands
