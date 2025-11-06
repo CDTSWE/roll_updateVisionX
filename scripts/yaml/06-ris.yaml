@@ -1,0 +1,234 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: 'elvasoft-ris'
+  name: 'elvasoft-ris'
+  namespace: ris-visionx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 'elvasoft-ris'
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: 'elvasoft-ris'
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+#        - image: kalbedevops.azurecr.io/elvasoft-ris:0.9.4
+#        - image: kalbedevops.azurecr.io/elvasoft-ris:0.10.2
+        - image: kalbedevops.azurecr.io/elvasoft-ris:0.13.2
+          imagePullPolicy: IfNotPresent
+          name: 'elvasoft-ris'
+          env:
+            # ========================================
+            # DEPLOYMENT & CORE CONFIGURATION
+            # ========================================
+            - name: 'REACT_APP_ENVIRONMENT'
+              value: 'DEV'
+            - name: 'NEXTAUTH_SECRET'
+              value: 'UnNBLdZ7NXFZ7LLoMSvF9ulLnPxTJNa7BhswrUgBAciHrokfXNCcwWbZS5173DNr'
+            - name: 'SUPABASE_JWT_SECRET'
+              value: 'your-super-secret-jwt-token-with-at-least-32-characters-long'
+            - name: 'AUTH_TRUST_HOST'
+              value: 'true'
+            - name: 'NEXTAUTH_URL'
+              value: 'https://ris.digital-lab.ai'
+            - name: 'NEXTAUTH_DEBUG'
+              value: 'true'
+            - name: 'SUPABASE_SERVICE_ROLE_KEY'
+              value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q'
+
+            # ========================================
+            # FIXED SERVICES (Same for all IPs)
+            # ========================================
+            - name: 'NEXT_PUBLIC_DCM4CHEE_POD'
+              value: 'http://70.153.25.44:13131/pod'
+            - name: 'NEXT_PUBLIC_HELPER_BASE_URL'
+              value: 'http://70.153.25.44:13131'
+            - name: 'NEXT_PUBLIC_TIMEZONE'
+              value: 'Asia/Jakarta'
+            - name: 'ELASTIC_USERNAME'
+              value: 'elastic'
+            - name: 'ELASTIC_PASSWORD'
+              value: 'cDrXF2qC44KH2381Z0YCD4z1'
+            - name: 'ELASTIC_URL'
+              value: 'https://20.212.244.1:9200/metrics-,metricbeat-/_search'
+            - name: 'ELASTIC_AGENT_HOSTNAME'
+              value: 'visionx-staging-worker'
+            - name: 'USER_MANUAL_URL'
+              value: 'https://drive.google.com/file/d/1-fK8ABfChmWIVLJ3wfyFsweTKBoK8o2z/view?usp=sharing'
+
+            # ========================================
+            # IP1 CONFIGURATION
+            # ========================================
+            - name: 'NEXT_PUBLIC_IP1_HOST_ORIGIN'
+              value: 'https://ris.digital-lab.ai'
+            - name: 'IP1_KEYCLOAK_REALM'
+              value: 'dcm4che'
+            - name: 'IP1_KEYCLOAK_CLIENT_ID'
+              value: 'visionx-RIS'
+            - name: 'IP1_KEYCLOAK_SECRET'
+              value: '0W6CpEjcHchFaZdNanyyYLnElaNdyPCd'
+            - name: 'IP1_KEYCLOAK_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che'
+            - name: 'IP1_KEYCLOAK_ADMIN_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che'
+            - name: 'IP1_SUPABASE_URL'
+              value: 'https://database.digital-lab.ai/supabase'
+            - name: 'IP1_SUPABASE_ANON_KEY'
+              value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE'
+            - name: 'IP1_FHIR_BASE_URL'
+              value: 'https://blue.digital-lab.ai/4_0_0'
+            - name: 'IP1_DCM4CHEE_BASE_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/DCM4CHEE/rs'
+            - name: 'IP1_DCM4CHEE_MWL_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/WORKLIST/rs'
+            - name: 'IP1_DCM4CHEE_ACCOUNT_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che/account'
+            - name: 'IP1_DCM4CHEE_USER_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/users'
+            - name: 'NEXT_PUBLIC_IP1_DCM4CHEE_UI_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/ui2/en'
+            - name: 'NEXT_PUBLIC_IP1_OHIF_VIEWER_URL'
+              value: 'https://dicom-viewer.digital-lab.ai/ohif-viewer'
+            - name: 'NEXT_PUBLIC_IP1_OPEN_SPEED_TEST'
+              value: 'https://speedtest.digital-lab.ai/'
+            - name: 'IP1_KEYCLOAK_REALM_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/c86e9053-b810-4e27-a934-eb9c5947523b/roles'
+            - name: 'IP1_REALM_MANAGEMENT_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/7898222c-7cf0-44c3-9dc4-2204e3e2cec8/roles'
+            - name: 'IP1_ACCOUNT_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/90a673ba-c435-4ebf-add3-67f571762238/roles'
+            - name: 'IP1_REALM_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/roles'
+            - name: 'IP1_REDIRECT_URI_CALLBACK'
+              value: 'https://ris.digital-lab.ai/api/auth/callback/keycloak'
+
+            # ========================================
+            # IP2 CONFIGURATION (Same values as IP1)
+            # ========================================
+            - name: 'NEXT_PUBLIC_IP2_HOST_ORIGIN'
+              value: 'https://ris.digital-lab.ai'
+            - name: 'IP2_KEYCLOAK_REALM'
+              value: 'dcm4che'
+            - name: 'IP2_KEYCLOAK_CLIENT_ID'
+              value: 'visionx-RIS'
+            - name: 'IP2_KEYCLOAK_SECRET'
+              value: '0W6CpEjcHchFaZdNanyyYLnElaNdyPCd'
+            - name: 'IP2_KEYCLOAK_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che'
+            - name: 'IP2_KEYCLOAK_ADMIN_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che'
+            - name: 'IP2_SUPABASE_URL'
+              value: 'https://database.digital-lab.ai/supabase'
+            - name: 'NEXT_PUBLIC_IP2_SUPABASE_URL'
+              value: 'https://database.digital-lab.ai/supabase'
+            - name: 'IP2_SUPABASE_ANON_KEY'
+              value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE'
+            - name: 'NEXT_PUBLIC_IP2_SUPABASE_ANON_KEY'
+              value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE'
+            - name: 'IP2_FHIR_BASE_URL'
+              value: 'https://blue.digital-lab.ai/4_0_0'
+            - name: 'IP2_DCM4CHEE_BASE_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/DCM4CHEE/rs'
+            - name: 'IP2_DCM4CHEE_MWL_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/WORKLIST/rs'
+            - name: 'IP2_DCM4CHEE_ACCOUNT_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che/account'
+            - name: 'IP2_DCM4CHEE_USER_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/users'
+            - name: 'NEXT_PUBLIC_IP2_DCM4CHEE_UI_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/ui2/en'
+            - name: 'NEXT_PUBLIC_IP2_OHIF_VIEWER_URL'
+              value: 'https://dicom-viewer.digital-lab.ai/ohif-viewer'
+            - name: 'NEXT_PUBLIC_IP2_OPEN_SPEED_TEST'
+              value: 'https://speedtest.digital-lab.ai/'
+            - name: 'IP2_KEYCLOAK_REALM_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/c86e9053-b810-4e27-a934-eb9c5947523b/roles'
+            - name: 'IP2_REALM_MANAGEMENT_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/7898222c-7cf0-44c3-9dc4-2204e3e2cec8/roles'
+            - name: 'IP2_ACCOUNT_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/90a673ba-c435-4ebf-add3-67f571762238/roles'
+            - name: 'IP2_REALM_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/roles'
+            - name: 'IP2_REDIRECT_URI_CALLBACK'
+              value: 'https://ris.digital-lab.ai/api/auth/callback/keycloak'
+
+            # ========================================
+            # LEGACY COMPATIBILITY (Keep for backwards compatibility)
+            # ========================================
+            - name: 'SUPABASE_AUTH_EXTERNAL_KEYCLOAK_REALM_ID'
+              value: 'dcm4che'
+            - name: 'SUPABASE_AUTH_EXTERNAL_KEYCLOAK_CLIENT_ID'
+              value: 'visionx-RIS'
+            - name: 'SUPABASE_AUTH_EXTERNAL_KEYCLOAK_SECRET'
+              value: '0W6CpEjcHchFaZdNanyyYLnElaNdyPCd'
+            - name: 'SUPABASE_AUTH_EXTERNAL_KEYCLOAK_REDIRECT_URI'
+              value: 'https://iam.digital-lab.ai/keycloak/auth/v1/callback'
+            - name: 'SUPABASE_AUTH_EXTERNAL_KEYCLOAK_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che'
+            - name: 'NEXT_PUBLIC_KEYCLOAK_ADMIN_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che'
+            - name: 'KEYCLOAK_REALM_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/c86e9053-b810-4e27-a934-eb9c5947523b/roles'
+            - name: 'REALM_MANAGEMENT_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/7898222c-7cf0-44c3-9dc4-2204e3e2cec8/roles'
+            - name: 'ACCOUNT_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/clients/90a673ba-c435-4ebf-add3-67f571762238/roles'
+            - name: 'REALM_MAPPINGS_ROLES_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/roles'
+            - name: 'REDIRECT_URI_CALLBACK'
+              value: 'https://ris.digital-lab.ai/api/auth/callback/keycloak'
+            - name: 'NEXT_PUBLIC_SUPABASE_URL'
+              value: 'https://database.digital-lab.ai/supabase'
+            - name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+              value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE'
+            - name: 'NEXT_PUBLIC_HOST_ORIGIN'
+              value: 'https://ris.digital-lab.ai'
+            - name: 'FHIR_BASE_URL'
+              value: 'https://blue.digital-lab.ai/4_0_0'
+            - name: 'NEXT_PUBLIC_DCM4CHEE_BASE_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/DCM4CHEE/rs'
+            - name: 'DCM4CHEE_MWL_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/WORKLIST/rs'
+            - name: 'NEXT_PUBLIC_DCM4CHEE_UI_BASE_URL'
+              value: 'https://dicom-admin.digital-lab.ai/dcm4chee-arc/ui2/en'
+            - name: 'DCM4CHEE_ACCOUNT_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/realms/dcm4che/account'
+            - name: 'DCM4CHEE_USER_BASE_URL'
+              value: 'https://iam.digital-lab.ai/keycloak/admin/realms/dcm4che/users'
+            - name: 'NEXT_PUBLIC_OHIF_VIEWER_URL'
+              value: 'https://dicom-viewer.digital-lab.ai/ohif-viewer'
+            - name: 'NEXT_PUBLIC_OPEN_SPEED_TEST'
+              value: 'https://speedtest.digital-lab.ai/'
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: 'elvasoft-ris'
+  name: 'elvasoft-ris'
+  namespace: ris-visionx
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      protocol: TCP
+      targetPort: 3000
+      nodePort: 30000
+      name: http
+  selector:
+    app: 'elvasoft-ris'

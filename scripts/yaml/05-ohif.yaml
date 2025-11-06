@@ -1,0 +1,157 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ohif-nginx-pv
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-nginx
+  capacity:
+    storage: 5Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /home/data/ohif/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ohif-nginx-pvc
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-nginx
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Mi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ohif-oauth-pv
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-oauth
+  capacity:
+    storage: 5Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /home/data/ohif/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ohif-oauth-pvc
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-oauth
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Mi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ohif-config-pv
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-config
+  capacity:
+    storage: 5Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /home/data/ohif/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ohif-config-pvc
+  namespace: dcm4chee
+spec:
+  storageClassName: ohif-config
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ohif
+  namespace: dcm4chee
+  labels:
+    app: ohif
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ohif
+  template:
+    metadata:
+      labels:
+        app: ohif
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: ohif
+#          image: kalbedevops.azurecr.io/visionx-ohif:3.9.3.1
+          image: kalbedevops.azurecr.io/visionx-ohif:3.9.3.25-unsecured
+#          image: kalbedevops.azurecr.io/visionx-ohif:3.9.3.19-fix-dragndrop-secured
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          securityContext:
+            capabilities:
+              add: ["NET_BIND_SERVICE"]
+            runAsUser: 0
+          #ADD THIS ENVIRONMENT VARIABLE FOR SKIP PROVIDER BUTTON:
+          env:
+            - name: OAUTH2_PROXY_SKIP_PROVIDER_BUTTON
+              value: "true"
+          volumeMounts:
+            - name: ohif-config-volume
+              mountPath: /var/www/html/app-config.js
+              subPath: app-config.js
+            - name: ohif-nginx-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: ohif-oauth-volume
+              mountPath: /etc/oauth2-proxy/oauth2-proxy.cfg
+              subPath: oauth2-proxy.cfg
+      restartPolicy: Always
+      volumes:
+        - name: ohif-config-volume
+          persistentVolumeClaim:
+            claimName: ohif-config-pvc
+        - name: ohif-nginx-volume
+          persistentVolumeClaim:
+            claimName: ohif-nginx-pvc
+        - name: ohif-oauth-volume
+          persistentVolumeClaim:
+            claimName: ohif-oauth-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ohif
+  namespace: dcm4chee
+  labels:
+    app: ohif
+spec:
+  type: ClusterIP
+#  type: NodePort
+  ports:
+    - name: http
+      port: 18081
+      targetPort: 80
+#      nodePort: 30001
+  selector:
+    app: ohif
+
