@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 ############################################
 # CONFIG
@@ -45,15 +46,12 @@ export IMAGINGSTUDY_HTTP_SENDER="http://10.0.0.11/elvasoft/fhir/4_0_0/ImagingStu
 export SERVICE_REQUEST_HTTP_SENDER="http://10.0.0.11/elvasoft/fhir/4_0_0/ServiceRequest/\${UpdatedAccessionNumber}"
 export PROCEDURE_HTTP_SENDER="http://10.0.0.11/elvasoft/fhir/4_0_0/Procedure/\${UpdatedAccessionNumber}"
 export SEND_AUDIT_LOG="http://10.0.0.11/elvasoft/base/rest/v1/audit_log"
-export SEND_AUDIT_TRAIL="http://10.0.0.11/elvasoft/base/rest/v1/audit_trail"
 
-# KEYCLOAK PASSWORD
-export KEYCLOAK_PASSWORD="yobaru"
+# ############################################
+# ############################################
 
-############################################
-############################################
 
-run_commands() {
+update_image() {
   if ! command -v node &> /dev/null; then
       echo "❌ Node.js not installed. Please install Node.js first."
       exit 1
@@ -74,4 +72,5 @@ run_commands() {
   read -p "✅ Selesai! Tekan Enter untuk keluar..."
 }
 
-run_commands
+update_image
+
