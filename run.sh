@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 ############################################
 # CONFIG
@@ -50,10 +51,31 @@ export SEND_AUDIT_TRAIL="http://10.0.0.11/elvasoft/base/rest/v1/audit_trail"
 # KEYCLOAK PASSWORD
 export KEYCLOAK_PASSWORD="yobaru"
 
-############################################
-############################################
 
-run_commands() {
+# --- 1. Config Supabase API (PostgREST) ---
+export SUPABASE_URL="https://database.digital-lab.ai/supabase"
+
+# INI PENTING: Dapatkan dari Supabase Dashboard atau file .env Anda
+export SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q"
+ --- 2. Config dcm4chee ---
+export DCM_BASE="https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets"
+export DCM_AET="DCM4CHEE"
+export DCM_QIDO="${DCM_BASE}/${DCM_AET}/rs"
+
+# --- 3. Config Login Keycloak (Lengkapi) ---
+export KC_TOKEN_URL="https://iam.digital-lab.ai/keycloak/realms/dcm4che/protocol/openid-connect/token"
+export KC_CLIENT_ID="dcm4chee-arc-ui"
+export KC_CLIENT_SECRET="changeit"
+export KC_USERNAME="admin"
+export KC_PASSWORD="Password123!"
+
+export DRY_RUN="false"
+
+# ############################################
+# ############################################
+
+
+update_image() {
   if ! command -v node &> /dev/null; then
       echo "❌ Node.js not installed. Please install Node.js first."
       exit 1
@@ -95,4 +117,4 @@ run_commands() {
   read -p "✅ Semua proses selesai! Tekan Enter untuk keluar..."
 }
 
-run_commands
+update_image

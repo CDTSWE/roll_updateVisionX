@@ -1,6 +1,16 @@
 const { NodeSSH } = require("node-ssh");
 const fs = require("fs");
 const path = require("path");
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function ask(question) {
+  return new Promise((resolve) => rl.question(question, resolve));
+}
 
 class SSHAdapter {
   constructor(config) {
@@ -31,6 +41,22 @@ class SSHAdapter {
   }
 
   async updateAndApplyFile(localPath, remoteFilename, imageVersion) {
+    const showImageVersion = `sudo grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
+    const responseShowImageVersion = await this.ssh.execCommand(
+      showImageVersion
+    );
+
+    console.log(`🔎 Current version: ${responseShowImageVersion.stdout}`);
+
+    const answer = await ask(
+      `Do you want to update ${remoteFilename} image? (y/n) `
+    );
+
+    if (answer.toLowerCase() !== "y") {
+      console.log("⏭️ Skipped");
+      return;
+    }
+
     const date = new Date();
     const timestamp = date
       .toISOString()
