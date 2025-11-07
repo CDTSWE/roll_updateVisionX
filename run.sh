@@ -73,4 +73,3 @@ update_image() {
 }
 
 update_image
-
