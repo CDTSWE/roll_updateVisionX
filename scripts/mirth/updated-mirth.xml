@@ -3,7 +3,7 @@
   <nextMetaDataId>19</nextMetaDataId>
   <name>mirth-vision</name>
   <description></description>
-  <revision>5</revision>
+  <revision>4</revision>
   <sourceConnector version="4.5.2">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -132,9 +132,16 @@ switch (gender.toLowerCase()) {
         patient.gender = &apos;other&apos;; 
 }
 
-// Patient DOB 
-if(msg[&apos;PID&apos;][&apos;PID.7&apos;][&apos;PID.7.1&apos;].toString() !== &apos;&apos;) { 
-	patient.birthDate = moment(msg[&apos;PID&apos;][&apos;PID.7&apos;][&apos;PID.7.1&apos;].toString(), &apos;YYYYMMDD&apos;).format(&apos;YYYY-MM-DD&apos;); 
+// Patient DOB (strict validation)
+var rawDob = msg[&apos;PID&apos;][&apos;PID.7&apos;][&apos;PID.7.1&apos;].toString().trim();
+
+if (rawDob !== &apos;&apos; &amp;&amp; rawDob.match(/^\d{8}$/)) {
+    var parsed = moment(rawDob, &apos;YYYYMMDD&apos;, true); // strict mode
+    if (parsed.isValid()) {
+        patient.birthDate = parsed.format(&apos;YYYY-MM-DD&apos;);
+    } else {
+        logger.warn(&apos;Invalid DOB ignored: &apos; + rawDob);
+    }
 } 
 
  
@@ -395,7 +402,7 @@ channelMap.put(&apos;UpdatedAccessionNumber&apos;, UpdatedAccessionNumber);</scr
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>false</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://iam.digital-lab.ai/keycloak/realms/dcm4che/protocol/openid-connect/token</host>
+        <host>http://10.0.0.11/elvasoft/ksf/realms/dcm4che/protocol/openid-connect/token</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -423,7 +430,7 @@ channelMap.put(&apos;UpdatedAccessionNumber&apos;, UpdatedAccessionNumber);</scr
           <entry>
             <string>password</string>
             <list>
-              <string>Password123!</string>
+              <string>changeit</string>
             </list>
           </entry>
         </parameters>
@@ -561,7 +568,7 @@ channelMap.put(&apos;keycloak_token&apos;, resp.access_token);</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/WORKLIST/rs/mwlitems</host>
+        <host>http://10.0.0.11/dcm4chee-arc/aets/WORKLIST/rs/mwlitems</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -768,80 +775,9 @@ try {
 	            
 	        } else {
 	            channelMap.put(&apos;no_mwl&apos;, true); // Study does not exist in MWL -&gt; send procedure and service request
-	            study.status = &quot;unknown&quot;; 
-	            log_audit.user_id = &quot;PACS&quot;;
-		       log_audit.username = &quot;PACS&quot;;
-		       trail_audit.user_id = &quot;PACS&quot;;
-		       trail_audit.username = &quot;PACS&quot;;
-		       log_audit.action =&quot;unscheduled study&quot;;  
-
-				study.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
-				    },
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
-				        &quot;value&quot;: studyID
-				    }
-				];
-				
-				serviceRequest.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
-				    }
-				];
-				
-				procedure.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
-				    },
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
-				        &quot;value&quot;: studyID
-				    }
-				];
-			  channelMap.put(&apos;UpdatedAccessionNumber&apos;, accessionNumber + &quot;-unscheduled&quot;);
 	        }
         } else {
 	            channelMap.put(&apos;no_mwl&apos;, true); // Study does not exist in MWL -&gt; send procedure and service request
-	            study.status = &quot;unknown&quot;; 
-	            log_audit.user_id = &quot;PACS&quot;;
-		       log_audit.username = &quot;PACS&quot;;
-		       trail_audit.user_id = &quot;PACS&quot;;
-		       trail_audit.username = &quot;PACS&quot;;
-		       log_audit.action =&quot;Unscheduled Study&quot;;
-
-				study.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: UpdatedAccessionNumber
-				    },
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
-				        &quot;value&quot;: studyID
-				    }
-				];
-				
-				serviceRequest.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: UpdatedAccessionNumber
-				    }
-				];
-				
-				procedure.identifier = [
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-				        &quot;value&quot;: UpdatedAccessionNumber
-				    },
-				    {
-				        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
-				        &quot;value&quot;: studyID
-				    }
-				];
         }
         
 //    } catch (e) {
@@ -915,7 +851,7 @@ channelMap.put(&apos;audit_trail&apos;, JSON.stringify(trail_audit));</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/Patient</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/Patient</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -1042,7 +978,9 @@ try {
 		channelMap.put(&apos;fhir_procedure&apos;, JSON.stringify(procedure));
 		channelMap.put(&apos;fhir_study&apos;, JSON.stringify(study)); 
 		channelMap.put(&apos;is_new_patient&apos;, false); 
-		channelMap.put(&apos;patientID&apos;, patientID); 
+		channelMap.put(&apos;patientID&apos;, patientID);
+		var accessionSupabase = &quot;eq.&quot; + UpdatedAccessionNumber;
+	 	channelMap.put(&apos;accessionSupabase&apos;, accessionSupabase);  
 	} else { 
 		// Pasien tidak ditemukan, abort kalau MWL sudah ada
 		if (noMWL === &apos;false&apos; || noMWL === false) {
@@ -1061,14 +999,16 @@ try {
 		serviceRequest.id = UpdatedAccessionNumber;
 		procedure.id = UpdatedAccessionNumber;
 
-		var patientID = patient_identifier_id;
+		var encodedPatientID = encodeURIComponent(patient_identifier_id);
 		patient.id = patient_identifier_id;
-		channelMap.put(&apos;patientID&apos;, patientID); 
+		channelMap.put(&apos;patientID&apos;, encodedPatientID); 
 		channelMap.put(&apos;fhir_patient&apos;, JSON.stringify(patient));
 
 		channelMap.put(&apos;fhir_service_request&apos;, JSON.stringify(serviceRequest));
 		channelMap.put(&apos;fhir_procedure&apos;, JSON.stringify(procedure));
 		channelMap.put(&apos;fhir_study&apos;, JSON.stringify(study));
+		var accessionSupabase = &quot;eq.&quot; + UpdatedAccessionNumber;
+	 	channelMap.put(&apos;accessionSupabase&apos;, accessionSupabase);  
 	}
 } catch (e) {
 		// Pasien tidak ditemukan, abort kalau MWL sudah ada
@@ -1086,14 +1026,16 @@ try {
 			serviceRequest.id = UpdatedAccessionNumber;
 			procedure.id = UpdatedAccessionNumber;
 	
-			var patientID = patient_identifier_id;
+			var encodedPatientID = encodeURIComponent(patient_identifier_id);
 			patient.id = patient_identifier_id;
-			channelMap.put(&apos;patientID&apos;, patientID); 
+			channelMap.put(&apos;patientID&apos;, encodedPatientID); 
 			channelMap.put(&apos;fhir_patient&apos;, JSON.stringify(patient));
 	
 			channelMap.put(&apos;fhir_service_request&apos;, JSON.stringify(serviceRequest));
 			channelMap.put(&apos;fhir_procedure&apos;, JSON.stringify(procedure));
 			channelMap.put(&apos;fhir_study&apos;, JSON.stringify(study));
+			var accessionSupabase = &quot;eq.&quot; + UpdatedAccessionNumber;
+	 		channelMap.put(&apos;accessionSupabase&apos;, accessionSupabase);  
 	    	}
 }</script>
           </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
@@ -1148,7 +1090,7 @@ try {
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/Patient/${patientID}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/Patient/${patientID}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -1335,7 +1277,7 @@ return isNew;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/WORKLIST/rs/mwlitems/${StudyMwl}/${spsID}/status/COMPLETED</host>
+        <host>http://10.0.0.11/dcm4chee-arc/aets/WORKLIST/rs/mwlitems/${StudyMwl}/${spsID}/status/COMPLETED</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -1497,7 +1439,7 @@ if ( noMWL == true ) {&#xd;	return false;	&#xd;
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/ServiceRequest</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ServiceRequest</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -1591,7 +1533,10 @@ if ( noMWL == true ) {&#xd;	return false;	&#xd;
             <script>var respMsg = response.getMessage(); 
 var study = JSON.parse($(&apos;fhir_study&apos;));
 study.status = {};
-
+var studyID = $(&apos;studyID&apos;);
+var UpdatedAccessionNumber = $(&apos;UpdatedAccessionNumber&apos;);
+var serviceRequest = JSON.parse($(&apos;fhir_service_request&apos;));
+var procedure = JSON.parse($(&apos;fhir_procedure&apos;));
 var log_audit = JSON.parse($(&apos;audit_log&apos;)); 
 var trail_audit = JSON.parse($(&apos;audit_trail&apos;)); 
 log_audit.user_id = {};
@@ -1647,11 +1592,26 @@ if (user_id &amp;&amp; username){
 }
 
 var resp = JSON.parse(respMsg);
+// Extract ServiceRequest status from response
+var srStatus = null;
+
+if (resp &amp;&amp; resp.resourceType === &quot;ServiceRequest&quot;) {
+    srStatus = resp.status;                       // e.g. &quot;completed&quot;, &quot;active&quot;
+} else if (resp &amp;&amp; resp.resourceType === &quot;Bundle&quot; &amp;&amp; resp.entry &amp;&amp; resp.entry.length &gt; 0) {
+    for (var i = 0; i &lt; resp.entry.length; i++) {
+        var ent = resp.entry[i];
+        if (ent &amp;&amp; ent.resource &amp;&amp; ent.resource.resourceType === &quot;ServiceRequest&quot;) {
+            srStatus = ent.resource.status;       // e.g. &quot;completed&quot;, &quot;active&quot;
+            break;
+        }
+    }
+}
 var respLength = respMsg.toString();
 channelMap.put (&apos;respLength1&apos;, respLength.length())
+channelMap.put (&apos;srStatus&apos;, srStatus)
 
 if (checkAccession) {
-	if (resp.resourceType === &quot;ServiceRequest&quot; || (resp.resourceType === &quot;Bundle&quot; &amp;&amp; resp.entry &amp;&amp; resp.entry.length &gt; 0)) {
+	if (srStatus === &quot;completed&quot;) {
        channelMap.put(&apos;no_service&apos;, false); // Study exists in MWL -&gt; don&apos;t send procedure and service request
        study.status = &quot;available&quot;;
 
@@ -1660,7 +1620,6 @@ if (checkAccession) {
        trail_audit.user_id = user_id;
        trail_audit.username = username;
        log_audit.action =&quot;Processed Study&quot;;
-       
    } else {
        channelMap.put(&apos;no_service&apos;, true); // Study does not exist in MWL -&gt; send procedure and service request
        study.status = &quot;unknown&quot;; 
@@ -1668,7 +1627,41 @@ if (checkAccession) {
        log_audit.username = &quot;PACS&quot;;
        trail_audit.user_id = &quot;PACS&quot;;
        trail_audit.username = &quot;PACS&quot;;
-       log_audit.action =&quot;unscheduled study&quot;;    
+       log_audit.action =&quot;unscheduled study&quot;;  
+		study.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		    },
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
+		        &quot;value&quot;: studyID
+		    }
+		];
+		
+		serviceRequest.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		    }
+		];
+		
+		procedure.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		    },
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
+		        &quot;value&quot;: studyID
+		    }
+		];
+	  channelMap.put(&apos;UpdatedAccessionNumber&apos;, accessionNumber + &quot;-unscheduled&quot;);
+	  study.id = accessionNumber + &quot;-unscheduled&quot;;
+	  serviceRequest.id = accessionNumber + &quot;-unscheduled&quot;;
+	  procedure.id = accessionNumber + &quot;-unscheduled&quot;;
+	  var accessionSupabase = &quot;eq.&quot; + accessionNumber + &quot;-unscheduled&quot;;
+	  channelMap.put(&apos;accessionSupabase&apos;, accessionSupabase); 
    }
 } else {
        channelMap.put(&apos;no_service&apos;, true); // Study does not exist in MWL -&gt; send procedure and service request
@@ -1678,9 +1671,40 @@ if (checkAccession) {
        trail_audit.user_id = &quot;PACS&quot;;
        trail_audit.username = &quot;PACS&quot;;
        log_audit.action =&quot;Unscheduled Study&quot;;
+
+		study.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: UpdatedAccessionNumber
+		    },
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
+		        &quot;value&quot;: studyID
+		    }
+		];
+		
+		serviceRequest.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: UpdatedAccessionNumber
+		    }
+		];
+		
+		procedure.identifier = [
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
+		        &quot;value&quot;: UpdatedAccessionNumber
+		    },
+		    {
+		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
+		        &quot;value&quot;: studyID
+		    }
+		];
 }
 
 channelMap.put(&apos;fhir_study&apos;, JSON.stringify(study));
+channelMap.put(&apos;fhir_service_request&apos;, JSON.stringify(serviceRequest));
+channelMap.put(&apos;fhir_procedure&apos;, JSON.stringify(procedure));
 channelMap.put(&apos;audit_log&apos;, JSON.stringify(log_audit));
 channelMap.put(&apos;audit_trail&apos;, JSON.stringify(trail_audit));</script>
           </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
@@ -1750,7 +1774,7 @@ return true;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/ImagingStudy</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ImagingStudy</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -1930,7 +1954,7 @@ return true;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://database.digital-lab.ai/supabase/rest/v1/performance</host>
+        <host>http://10.0.0.11/elvasoft/base/rest/v1/performance</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2194,7 +2218,7 @@ return true;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets/DCM4CHEE/rs/studies</host>
+        <host>http://10.0.0.11/dcm4chee-arc/aets/DCM4CHEE/rs/studies</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2485,7 +2509,7 @@ return true;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/ImagingStudy/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ImagingStudy/${UpdatedAccessionNumber}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2650,7 +2674,7 @@ if ( nostudy == true ) {&#xd;	var observation = JSON.parse($(&apos;fhir_study&ap
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/ServiceRequest/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ServiceRequest/${UpdatedAccessionNumber}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2838,7 +2862,7 @@ if ( nostudy == true &amp;&amp; noservice == true) {&#xd;	return noMWL;	&#xd;
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://blue.digital-lab.ai/4_0_0/Procedure/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/Procedure/${UpdatedAccessionNumber}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -3018,7 +3042,7 @@ if ( nostudy == true &amp;&amp; noservice == true) {&#xd;	return noMWL;	&#xd;
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://database.digital-lab.ai/supabase/rest/v1/audit_log</host>
+        <host>http://10.0.0.11/elvasoft/base/rest/v1/audit_log</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -3185,7 +3209,7 @@ if ( nostudy == true ) {&#xd;	return true;	&#xd;
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>https://database.digital-lab.ai/supabase/rest/v1/audit_trail</host>
+        <host>http://10.0.0.11/elvasoft/base/rest/v1/audit_trail</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -3375,8 +3399,8 @@ return;</undeployScript>
     <metadata>
       <enabled>true</enabled>
       <lastModified>
-        <time>1758773222085</time>
-        <timezone>Asia/Bangkok</timezone>
+        <time>1761209329364</time>
+        <timezone>Asia/Jakarta</timezone>
       </lastModified>
       <pruningSettings>
         <archiveEnabled>true</archiveEnabled>
@@ -3390,8 +3414,8 @@ return;</undeployScript>
         <name>Library 1</name>
         <revision>1</revision>
         <lastModified>
-          <time>1751460095565</time>
-          <timezone>Etc/UTC</timezone>
+          <time>1761104884001</time>
+          <timezone>Asia/Jakarta</timezone>
         </lastModified>
         <description></description>
         <includeNewChannels>false</includeNewChannels>
@@ -3405,16 +3429,16 @@ return;</undeployScript>
             <name>Moment.js</name>
             <revision>1</revision>
             <lastModified>
-              <time>1751460095634</time>
-              <timezone>Etc/UTC</timezone>
+              <time>1761104884149</time>
+              <timezone>Asia/Jakarta</timezone>
             </lastModified>
             <contextSet>
               <delegate>
                 <contextType>DESTINATION_DISPATCHER</contextType>
-                <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
                 <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
-                <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
                 <contextType>SOURCE_RECEIVER</contextType>
+                <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
+                <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
               </delegate>
             </contextSet>
             <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">

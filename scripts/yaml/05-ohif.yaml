@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolume
 metadata:
   name: ohif-nginx-pv
@@ -12,7 +12,7 @@ spec:
   hostPath:
     path: /home/data/ohif/
 ---
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolumeClaim
 metadata:
   name: ohif-nginx-pvc
@@ -25,7 +25,7 @@ spec:
     requests:
       storage: 5Mi
 ---
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolume
 metadata:
   name: ohif-oauth-pv
@@ -39,7 +39,7 @@ spec:
   hostPath:
     path: /home/data/ohif/
 ---
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolumeClaim
 metadata:
   name: ohif-oauth-pvc
@@ -52,7 +52,7 @@ spec:
     requests:
       storage: 5Mi
 ---
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolume
 metadata:
   name: ohif-config-pv
@@ -66,7 +66,7 @@ spec:
   hostPath:
     path: /home/data/ohif/
 ---
-apiVersion: v1
+apiVersion: v23
 kind: PersistentVolumeClaim
 metadata:
   name: ohif-config-pvc
@@ -79,7 +79,7 @@ spec:
     requests:
       storage: 5Mi
 ---
-apiVersion: apps/v1
+apiVersion: apps/v23
 kind: Deployment
 metadata:
   name: ohif
@@ -137,7 +137,7 @@ spec:
             claimName: ohif-oauth-pvc
 
 ---
-apiVersion: v1
+apiVersion: v23
 kind: Service
 metadata:
   name: ohif
