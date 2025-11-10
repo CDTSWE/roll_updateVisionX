@@ -149,7 +149,7 @@ async function updateSupabaseCount(studyUid, newCount) {
 /**
  * Fungsi Utama
  */
-async function main() {
+async function runRecount() {
     if (DRY_RUN) {
         log("=========================================");
         log("========= MEMULAI MODE DRY RUN ==========");
@@ -251,8 +251,4 @@ async function main() {
     }
 }
 
-// Menjalankan skrip
-main().catch(err => {
-    log(`❌ ERROR KRITIS: ${err.message}`);
-    process.exit(1);
-});
+module.exports = runRecount;
