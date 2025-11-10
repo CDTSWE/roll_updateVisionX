@@ -1,16 +1,7 @@
 const { NodeSSH } = require("node-ssh");
 const fs = require("fs");
 const path = require("path");
-const readline = require("readline");
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-function ask(question) {
-  return new Promise((resolve) => rl.question(question, resolve));
-}
+const AskHelper = require("./../utils/readline");
 
 class SSHAdapter {
   constructor(config) {
@@ -38,45 +29,52 @@ class SSHAdapter {
     }
   }
 
-  async updateAndApplyFile(localPath, remoteFilename, imageVersion) {
-    const showImageVersion = `sudo grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
-    const responseShowImageVersion = await this.ssh.execCommand(
-      showImageVersion
-    );
+  async updateAndApplyFile(remoteFilename, imageVersion) {
+    const askHelper = new AskHelper();
 
-    console.log(`🔎 Current version: ${responseShowImageVersion.stdout}`);
-
-    const answer = await ask(
-      `Do you want to update ${remoteFilename} image? (y/n) `
-    );
-
-    if (answer.toLowerCase() === "n") {
-      console.log("⏭️ Skipped");
-      return;
-    } else if (answer.toLowerCase() === "y") {
-      const imageVersionAnswer = await ask(
-        `Enter the image version you want to update (x.x.x): `
-      );
-      let changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
-      if (responseShowImageVersion.stdout[0] == "-") {
-        changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|- ${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
-      }
-
-      await this.ssh.execCommand(changeVersion);
-
-      console.log(`Success updated image version to ${imageVersionAnswer}`);
-      const deployAnswer = await ask(
-        `Want to deploy ${remoteFilename} now? (y/n): `
+    try {
+      const showImageVersion = `sudo grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
+      const responseShowImageVersion = await this.ssh.execCommand(
+        showImageVersion
       );
 
-      if (deployAnswer.toLowerCase() === "y") {
-        const deploy = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
-        await this.ssh.execCommand(deploy);
-        console.log(`✅ Deployed ${remoteFilename}`);
-      } else if (deployAnswer.toLowerCase() === "n") {
-        console.log("⏭️ Skipped deployment");
-        return;
+      console.log(`🔎 Current version: ${responseShowImageVersion.stdout}`);
+
+      const answer = await askHelper.ask(
+        `Do you want to update ${remoteFilename} image? (y/n) `
+      );
+
+      if (answer.toLowerCase() === "n") {
+        console.log("⏭️ Skipped");
+        return; // 'finally' akan tetap berjalan
+      } else if (answer.toLowerCase() === "y") {
+        const imageVersionAnswer = await askHelper.ask(
+          `Enter the image version you want to update (x.x.x): `
+        );
+
+        let changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
+        if (responseShowImageVersion.stdout[0] == "-") {
+          changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|- ${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
+        }
+
+        await this.ssh.execCommand(changeVersion);
+
+        console.log(`Success updated image version to ${imageVersionAnswer}`);
+        const deployAnswer = await askHelper.ask(
+          `Want to deploy ${remoteFilename} now? (y/n): `
+        );
+
+        if (deployAnswer.toLowerCase() === "y") {
+          const deploy = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
+          await this.ssh.execCommand(deploy);
+          console.log(`✅ Deployed ${remoteFilename}`);
+        } else if (deployAnswer.toLowerCase() === "n") {
+          console.log("⏭️ Skipped deployment");
+          return;
+        }
       }
+    } finally {
+      askHelper.close();
     }
   }
 }
