@@ -14,17 +14,17 @@ async function main() {
   await deployYamlFiles(ssh, env);
   await ssh.disconnect();
 
-  // DB
-  console.log("\n=== Database Process ===");
-  const db = new DBAdapter(env);
-  await db.connect();
-  await updateDatabase(db);
-  await db.disconnect();
+  // // DB
+  // console.log("\n=== Database Process ===");
+  // const db = new DBAdapter(env);
+  // await db.connect();
+  // await updateDatabase(db);
+  // await db.disconnect();
 
-  // Mirth
-  console.log("\n=== Mirth Process ===");
-  const mirth = new MirthAdapter(env);
-  await updateMirthChannel(mirth);
+  // // Mirth
+  // console.log("\n=== Mirth Process ===");
+  // const mirth = new MirthAdapter(env);
+  // await updateMirthChannel(mirth);
 
   console.log("\n🚀 All deployments completed successfully!");
 }

@@ -18,9 +18,9 @@ export SSH_PORT=22
 export SSH_USER="elvasoftk3s"
 export SSH_PASSWORD="3lvas0ftK3S!"
 
-export RIS_IMAGE_VERSION="image: kalbedevops.azurecr.io/elvasoft-ris:0.11.3"
-export BLUE_HALO_IMAGE_VERSION="image: kalbedevops.azurecr.io/vision/blue-halo:0.1.7"
-export OHIF_IMAGE_VERSION="image: kalbedevops.azurecr.io/visionx-ohif:3.9.3.25-unsecured"
+export RIS_IMAGE_VERSION="image: kalbedevops.azurecr.io/elvasoft-ris:"
+export BLUE_HALO_IMAGE_VERSION="image: kalbedevops.azurecr.io/vision/blue-halo:"
+export OHIF_IMAGE_VERSION="image: kalbedevops.azurecr.io/visionx-ohif:"
 
 export RIS_YAML_FILE="06-ris.yaml"
 export BLUE_HALO_YAML_FILE="07-blue-halo.yaml"
@@ -57,7 +57,7 @@ export SUPABASE_URL="https://database.digital-lab.ai/supabase"
 
 # INI PENTING: Dapatkan dari Supabase Dashboard atau file .env Anda
 export SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q"
- --- 2. Config dcm4chee ---
+# --- 2. Config dcm4chee ---
 export DCM_BASE="https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets"
 export DCM_AET="DCM4CHEE"
 export DCM_QIDO="${DCM_BASE}/${DCM_AET}/rs"
@@ -102,7 +102,7 @@ update_image() {
   RECOUNT_SCRIPT="./scripts/clean_data/recount_instances.js"
 
   if [ -f "$RECOUNT_SCRIPT" ]; then
-    node "$RECOUNT_SCRIPT"
+    # node "$RECOUNT_SCRIPT"
     
     if [ $? -eq 0 ]; then
       echo "✅ Selesai Recount."

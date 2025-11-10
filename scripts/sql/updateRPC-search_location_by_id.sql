@@ -1,76 +1,76 @@
--- CREATE OR REPLACE FUNCTION public.search_location_by_id(location_id text)
---  RETURNS jsonb
---  LANGUAGE plpgsql
--- AS $function$BEGIN
+CREATE OR REPLACE FUNCTION public.search_location_by_id(location_id text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$BEGIN
 
---   RETURN (
+  RETURN (
 
--- SELECT jsonb_build_object(
+SELECT jsonb_build_object(
 
---   'resourceType', 'Location',
+  'resourceType', 'Location',
 
---   'id', id,
+  'id', id,
 
---   'status', status,
+  'status', status,
 
---   'name', name,
+  'name', name,
 
---   'type', type,
+  'type', type,
 
---   'extension',
+  'extension',
 
---     -- Conditionally build an array for the modality extension
+    -- Conditionally build an array for the modality extension
 
---     (CASE
+    (CASE
 
---       WHEN location_modality IS NOT NULL THEN
+      WHEN location_modality IS NOT NULL THEN
 
---         jsonb_build_array(
+        jsonb_build_array(
 
---           jsonb_build_object(
+          jsonb_build_object(
 
---             'url', 'http://example.org/fhir/StructureDefinition/location-modality',
+            'url', 'http://example.org/fhir/StructureDefinition/location-modality',
 
---             'valueCodeableConcept', location_modality
+            'valueCodeableConcept', location_modality
 
---           )
+          )
 
---         )
+        )
 
---       ELSE '[]'::jsonb
+      ELSE '[]'::jsonb
 
---     END)
+    END)
 
---     -- Concatenate (||) it with the array for the ae_title extension
+    -- Concatenate (||) it with the array for the ae_title extension
 
---     ||
+    ||
 
---     (CASE
+    (CASE
 
---       WHEN ae_title IS NOT NULL THEN
+      WHEN ae_title IS NOT NULL THEN
 
---         jsonb_build_array(
+        jsonb_build_array(
 
---           jsonb_build_object(
+          jsonb_build_object(
 
---             'url', 'http://example.org/fhir/StructureDefinition/ae-title',
+            'url', 'http://example.org/fhir/StructureDefinition/ae-title',
 
---             'valueString', ae_title
+            'valueString', ae_title
 
---           )
+          )
 
---         )
+        )
 
---       ELSE '[]'::jsonb
+      ELSE '[]'::jsonb
 
---     END)
+    END)
 
--- )
+)
 
--- FROM public."location_fhir"
+FROM public."location_fhir"
 
--- WHERE id = location_id
+WHERE id = location_id
 
---   );
+  );
 
--- END;$function$
+END;$function$

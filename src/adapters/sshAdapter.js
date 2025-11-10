@@ -29,8 +29,6 @@ class SSHAdapter {
     console.log(`🔁 Connecting to ${this.config.host} via SSH...`);
     await this.ssh.connect(this.config);
     console.log("✅ SSH connected");
-    // Optional: switch to root if needed
-    // await this.ssh.execCommand('sudo su');
   }
 
   async disconnect() {
@@ -52,59 +50,33 @@ class SSHAdapter {
       `Do you want to update ${remoteFilename} image? (y/n) `
     );
 
-    if (answer.toLowerCase() !== "y") {
+    if (answer.toLowerCase() === "n") {
       console.log("⏭️ Skipped");
       return;
-    }
-
-    const date = new Date();
-    const timestamp = date
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", "-")
-      .replace(":", "")
-      .replace(":", "");
-    const remotePath = `${this.remoteBasePath}/${remoteFilename}`;
-    const backupPath = `${this.backupPath}/${
-      path.parse(remoteFilename).name
-    }-${timestamp}.yaml`;
-    const tempPath = `/tmp/${timestamp}-${remoteFilename}`;
-
-    console.log(`📁 Processing: ${localPath}`);
-
-    // Check if backup directory exit
-    const backupDir = `sudo mkdir ${this.backupPath}`;
-    await this.ssh.execCommand(backupDir);
-
-    // Check if version exist
-    const versionCheck = `sudo grep "${imageVersion}" ${remotePath}`;
-    const responseVersionCheck = await this.ssh.execCommand(versionCheck);
-    if (responseVersionCheck.stdout) {
-      console.log(
-        `⚠️ Image version ${remoteFilename} already exist: ${imageVersion}`
+    } else if (answer.toLowerCase() === "y") {
+      const imageVersionAnswer = await ask(
+        `Enter the image version you want to update (x.x.x): `
       );
-    } else {
-      // Backup
-      const backupCmd = `sudo cp ${remotePath} ${backupPath} 2>/dev/null || true`;
-      await this.ssh.execCommand(backupCmd);
-      console.log(`✅ Backed up to ${backupPath}`);
+      let changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
+      if (responseShowImageVersion.stdout[0] == "-") {
+        changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|- ${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
+      }
 
-      // Upload
-      await this.ssh.putFile(localPath, tempPath);
-      console.log(`✅ Uploaded to temp path`);
+      await this.ssh.execCommand(changeVersion);
 
-      // Replace
-      await this.ssh.execCommand(`sudo mv ${tempPath} ${remotePath}`);
-      console.log(`✅ Replaced remote file`);
+      console.log(`Success updated image version to ${imageVersionAnswer}`);
+      const deployAnswer = await ask(
+        `Want to deploy ${remoteFilename} now? (y/n): `
+      );
 
-      // Apply
-      // const applyResult = await this.ssh.execCommand(
-      //   `kubectl apply -f ${remotePath}`
-      // );
-      // if (applyResult.stderr) {
-      //   console.warn(`⚠️ kubectl stderr: ${applyResult.stderr}`);
-      // }
-      // console.log(`✅ kubectl applied: ${applyResult.stdout.trim()}`);
+      if (deployAnswer.toLowerCase() === "y") {
+        const deploy = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
+        await this.ssh.execCommand(deploy);
+        console.log(`✅ Deployed ${remoteFilename}`);
+      } else if (deployAnswer.toLowerCase() === "n") {
+        console.log("⏭️ Skipped deployment");
+        return;
+      }
     }
   }
 }
