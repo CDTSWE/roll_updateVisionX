@@ -18,9 +18,9 @@ async function main() {
     runMirth = await ask.ask("Jalankan proses Mirth? (y/n) ");
   } catch (err) {
     console.error("💥 Gagal saat proses tanya jawab:", err);
-    process.exit(1); 
+    process.exit(1);
   } finally {
-   ask.close();
+    ask.close();
   }
 
   try {
@@ -29,7 +29,7 @@ async function main() {
       console.log("\n=== SSH Process ===");
       const ssh = new SSHAdapter(env);
       await ssh.connect();
-      await deployYamlFiles(ssh, env); 
+      await deployYamlFiles(ssh, env);
       await ssh.disconnect();
       console.log("✓ SSH Process Completed.");
     } else {
@@ -67,5 +67,5 @@ async function main() {
 
 main().catch((err) => {
   console.error("💥 Fatal error:", err);
-  process.exit(1); 
+  process.exit(1);
 });

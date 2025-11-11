@@ -52,27 +52,46 @@ export SEND_AUDIT_LOG="${URL}elvasoft/base/rest/v1/audit_log"
 export SEND_AUDIT_TRAIL="${URL}elvasoft/base/rest/v1/audit_trail"
 
 # KEYCLOAK PASSWORD
-export KEYCLOAK_PASSWORD="yobaru"
+export KEYCLOAK_PASSWORD="changeit"
 
 # ======== CLEAN NUMBER OF INSTANCE ======== 
 
 # --- 1. Config Supabase API (PostgREST) ---
-export SUPABASE_URL="https://database.digital-lab.ai/supabase"
+export SUPABASE_URL="${URL}elvasoft/base"
 export SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q"
 
 # --- 2. Config dcm4chee ---
-export DCM_BASE="https://dicom-admin.digital-lab.ai/dcm4chee-arc/aets"
+export DCM_BASE="${URL}dcm4chee-arc/aets"
 export DCM_AET="DCM4CHEE"
 export DCM_QIDO="${DCM_BASE}/${DCM_AET}/rs"
+export DCM_WADO="${DCM_BASE}/${DCM_AET}/wado"
 
 # --- 3. Config Login Keycloak (Lengkapi) ---
-export KC_TOKEN_URL="https://iam.digital-lab.ai/keycloak/realms/dcm4che/protocol/openid-connect/token"
+export KC_TOKEN_URL="${URL}elvasoft/ksf/realms/dcm4che/protocol/openid-connect/token"
 export KC_CLIENT_ID="dcm4chee-arc-ui"
 export KC_CLIENT_SECRET="changeit"
 export KC_USERNAME="admin"
-export KC_PASSWORD="Password123!"
+export KC_PASSWORD="${KEYCLOAK_PASSWORD}"
 export DRY_RUN="false"
+export KC_SCOPE="openid"
 
+# --- 4. Config Auth Bearer Token (multiple patient) ---
+export CANON="elvasoft"
+export AUTH_TYPE="bearer"
+export BEARER_TOKEN=""
+export TOKEN_SCOPE="openid"
+export CURL_INSECURE=false
+
+# --- 5. FHIR SERVER ---
+export FHIR_BASE="http://blue.digital-lab.ai/4_0_0"
+
+# --- 6. System identifiers ---
+export ACC_SYSTEM="http://hospital.smarthealth.org/accession"
+export SPS_SYSTEM="http://hospital.smarthealth.org/sps-id"
+export STUDYID_SYSTEM="http://hospital.smarthealth.org/study-id"
+
+# --- 7. Options
+export VERBOSE=true
 # ############################################
 # ############################################
 
@@ -93,6 +112,7 @@ update_image() {
 
   echo "🚀 Running script..."
   npm start
+  node "./scripts/clean_data/clean_mwl_status.js"
 
   # echo ""
   # echo "✅ Skrip utama selesai."
