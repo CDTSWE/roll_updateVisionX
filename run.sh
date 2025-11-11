@@ -81,13 +81,6 @@ export BEARER_TOKEN=""
 export TOKEN_SCOPE="openid"
 export CURL_INSECURE=false
 
-# --- 4. Config Auth Bearer Token (multiple patient) ---
-export CANON="elvasoft"
-export AUTH_TYPE="bearer"
-export BEARER_TOKEN=""
-export TOKEN_SCOPE="openid"
-export CURL_INSECURE=false
-
 # --- 5. FHIR SERVER ---
 export FHIR_BASE="${URL}elvasoft/fhir/4_0_0"
 
@@ -97,7 +90,7 @@ export SPS_SYSTEM="http://hospital.smarthealth.org/sps-id"
 export STUDYID_SYSTEM="http://hospital.smarthealth.org/study-id"
 
 # --- 7. Options
-export VERBOSE=true
+export VERBOSE=false
 # ############################################
 # ############################################
 
