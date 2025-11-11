@@ -6,31 +6,31 @@ const axios = require('axios');
 const { URLSearchParams } = require('url');
 
 // =================== CONFIG ===================
-const HOST = process.env.HOST || 'http://10.0.0.11/dcm4chee-arc';
-const AET = process.env.AET || 'DCM4CHEE';
-const CANON = process.env.CANON || 'elvasoft'; // Canonical issuer
-const LIMIT = 200;
-const DRY_RUN = (process.env.DRY_RUN || 'false').toLowerCase() === 'true';
+const {
+    CANON,
+    AUTH_TYPE,
+    BEARER_TOKEN: BEARER_TOKEN_ENV,
+    BASIC_USER,
+    BASIC_PASS,
+    TOKEN_SCOPE,
+    CURL_INSECURE,
 
-// --- Auth Config ---
-// Can be 'bearer', 'basic', or 'none'
-const AUTH_TYPE = process.env.AUTH_TYPE || 'bearer';
-// Token can be passed directly via env
-let BEARER_TOKEN = process.env.BEARER_TOKEN || ''; 
-const BASIC_USER = process.env.BASIC_USER || '';
-const BASIC_PASS = process.env.BASIC_PASS || '';
+    DCM_BASE,
+    DCM_AET,
+    DRY_RUN: DRY_RUN_ENV,
+    KC_TOKEN_URL,
+    KC_CLIENT_ID,
+    KC_CLIENT_SECRET,
+    KC_USERNAME,
+    KC_PASSWORD
+} = process.env;
 
-// --- Token Retrieval Config (if AUTH_TYPE is 'bearer' and no token is provided) ---
-const TOKEN_URL = process.env.TOKEN_URL || 'http://10.0.0.11/elvasoft/ksf/realms/dcm4che/protocol/openid-connect/token';
-const TOKEN_CLIENT_ID = process.env.TOKEN_CLIENT_ID || 'dcm4chee-arc-ui';
-const TOKEN_CLIENT_SECRET = process.env.TOKEN_CLIENT_SECRET || 'changeit';
-const TOKEN_USERNAME = process.env.TOKEN_USERNAME || 'admin';
-const TOKEN_PASSWORD = process.env.TOKEN_PASSWORD || 'changeit';
-const TOKEN_SCOPE = process.env.TOKEN_SCOPE || 'openid';
+const LIMIT = 500;
+const DRY_RUN = (DRY_RUN_ENV || 'false').toLowerCase() === 'true'; // Default 'false' aman
+let BEARER_TOKEN = BEARER_TOKEN_ENV || ''; // Default '' aman
 
-// --- Other Config ---
-// Set to true to allow self-signed certs (equiv. to curl -k)
-const NODE_TLS_REJECT_UNAUTHORIZED = (process.env.CURL_INSECURE || 'false').toLowerCase() === 'true' ? '0' : '1';
+// Set 'true' untuk mengabaikan error TLS (seperti curl -k)
+const NODE_TLS_REJECT_UNAUTHORIZED = (CURL_INSECURE || 'false').toLowerCase() === 'true' ? '0' : '1';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = NODE_TLS_REJECT_UNAUTHORIZED;
 
 // ================ INTERNALS ===================
@@ -49,13 +49,13 @@ async function getToken() {
   try {
     const params = new URLSearchParams();
     params.append('grant_type', 'password');
-    params.append('client_secret', TOKEN_CLIENT_SECRET);
-    params.append('client_id', TOKEN_CLIENT_ID);
-    params.append('username', TOKEN_USERNAME);
-    params.append('password', TOKEN_PASSWORD);
+    params.append('client_secret', KC_CLIENT_SECRET);
+    params.append('client_id', KC_CLIENT_ID);
+    params.append('username', KC_USERNAME);
+    params.append('password', KC_PASSWORD);
     params.append('scope', TOKEN_SCOPE);
 
-    const response = await axios.post(TOKEN_URL, params, {
+    const response = await axios.post(KC_TOKEN_URL, params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
     
@@ -106,7 +106,7 @@ function urlencode(str) {
  * Fetches a single page of patients.
  */
 async function qidoPatientsPage(offset) {
-  const url = `${HOST}/aets/${AET}/rs/patients?includefield=all&offset=${offset}&limit=${LIMIT}`;
+  const url = `${DCM_BASE}/${DCM_AET}/rs/patients?includefield=all&offset=${offset}&limit=${LIMIT}`;
   const response = await api.get(url);
   return response.data;
 }
@@ -118,51 +118,69 @@ async function qidoPatientsPage(offset) {
 async function pickDemoForPid(pid) {
   const pidEnc = urlencode(pid);
 
-  // 1. Try to get demo from existing canonical patient record
+  // 1. Prioritas 1: Coba dapatkan demo dari Patient Record Kanonis
   try {
-    const patUrl = `${HOST}/aets/${AET}/rs/patients?00100020=${pidEnc}&includefield=all`;
+    const patUrl = `${DCM_BASE}/${DCM_AET}/rs/patients?00100020=${pidEnc}&includefield=all`;
     const patResponse = await api.get(patUrl);
-    const patients = patResponse.data;
+    const pats_json = patResponse.data;
 
-    if (Array.isArray(patients)) {
-      const canonicalPat = patients.find(p => p['00100021']?.Value[0] === CANON);
-      if (canonicalPat) {
-        const name = canonicalPat['00100010']?.Value[0]?.Alphabetic ?? '';
-        const dob = canonicalPat['00100030']?.Value[0] ?? '';
-        const sex = canonicalPat['00100040']?.Value[0] ?? '';
-        if (name || dob || sex) {
-          return { name, dob, sex };
-        }
-      }
+    // Equivalent of: if ! echo "$pats_json" | jq -e 'type=="array"'
+    if (!Array.isArray(pats_json)) {
+      // Jika bukan array (misal string warning dari server), perlakukan sebagai empty.
+      return { name: '', dob: '', sex: '' }; 
     }
+
+    // Cari entri yang memiliki CANON issuer
+    const canonicalPat = pats_json.find(p => p['00100021']?.Value[0] === CANON);
+
+    let name = '';
+    let dob = '';
+    let sex = '';
+
+    if (canonicalPat) {
+      // Ambil data jika canonicalPat ditemukan
+      name = canonicalPat['00100010']?.Value[0]?.Alphabetic ?? '';
+      dob = canonicalPat['00100030']?.Value[0] ?? '';
+      sex = canonicalPat['00100040']?.Value[0] ?? '';
+    }
+
+    if (name || dob || sex) {
+      // Jika ada data yang ditemukan dari canonical patient record, kembalikan
+      return { name, dob, sex };
+    }
+
   } catch (err) {
+    // Jika fetch gagal total (misal 404, 500, atau koneksi), dicatat dan lanjut ke Prioritas 2
     console.warn(`Warning: Could not fetch patient records for ${pid}`, err.message);
   }
 
-  // 2. If not found, get demo from the most recent study
+  // 2. Prioritas 2: Jika tidak ditemukan, dapatkan demo dari studi terbaru
   try {
-    const studyUrl = `${HOST}/aets/${AET}/rs/studies?00100020=${pidEnc}&includefield=all`;
+    const studyUrl = `${DCM_BASE}/${DCM_AET}/rs/studies?00100020=${pidEnc}&includefield=all`;
     const studyResponse = await api.get(studyUrl);
-    const studies = studyResponse.data;
+    const studies_json = studyResponse.data;
 
-    if (!Array.isArray(studies) || studies.length === 0) {
-      return { name: '', dob: '', sex: '' }; // No studies, return empty
+    // Equivalent of: if ! echo "$studies_json" | jq -e 'type=="array"'
+    if (!Array.isArray(studies_json)) {
+      return { name: '', dob: '', sex: '' };
     }
 
+    // Replikasi logika dtkey dan sorting dari JQ
     const getDtKey = (study) => {
       const d = study['00080020']?.Value[0] ?? ''; // Study Date
       const t = study['00080030']?.Value[0] ?? ''; // Study Time
       return `${d}T${t}`;
     };
 
-    const mappedStudies = studies.map(study => ({
+    const mappedStudies = studies_json.map(study => ({
       k: getDtKey(study),
       n: study['00100010']?.Value[0]?.Alphabetic ?? '',
       d: study['00100030']?.Value[0] ?? '',
       s: study['00100040']?.Value[0] ?? '',
     }));
 
-    mappedStudies.sort((a, b) => b.k.localeCompare(a.k)); // Sort descending by datetime
+    // Sort descending by datetime key (k)
+    mappedStudies.sort((a, b) => b.k.localeCompare(a.k)); 
 
     const latest = mappedStudies[0] ?? {};
     return {
@@ -207,10 +225,10 @@ async function doMerge(pid, srcIssuer, payload) {
   const srcIssuerStr = srcIssuer || '<empty>';
   
   if (!srcIssuer) {
-    url = `${HOST}/aets/${AET}/rs/patients/${pathPid}?merge=true`;
+    url = `${DCM_BASE}/${DCM_AET}/rs/patients/${pathPid}?merge=true`;
   } else {
     const pathIss = urlencode(srcIssuer);
-    url = `${HOST}/aets/${AET}/rs/patients/${pathPid}^^^${pathIss}?merge=true`;
+    url = `${DCM_BASE}/${DCM_AET}/rs/patients/${pathPid}^^^${pathIss}?merge=true`;
   }
 
   const now = new Date().toISOString();
@@ -249,7 +267,43 @@ async function doMerge(pid, srcIssuer, payload) {
 /**
  * Main execution function.
  */
-async function main() {
+async function runPatientMerge() {
+
+  console.log("Memvalidasi konfigurasi (Patient Merge) dari run.sh...");
+  
+  const requiredVars = { DCM_BASE, DCM_AET, CANON, AUTH_TYPE };
+  const missing = Object.keys(requiredVars).filter(key => !requiredVars[key]);
+
+  if (missing.length > 0) {
+      console.error(`❌ ERROR: Konfigurasi di run.sh tidak lengkap.`);
+      console.error(`Variabel berikut WAJIB di-export: ${missing.join(', ')}`);
+      console.error("Proses Patient Merge dibatalkan.");
+      return; // Stop
+  }
+
+  // Validasi kondisional (jika auth 'bearer' dan token tidak diset manual)
+  if (AUTH_TYPE === 'bearer' && !BEARER_TOKEN) {
+    const kcVars = { KC_TOKEN_URL, KC_CLIENT_ID, KC_CLIENT_SECRET, KC_USERNAME, KC_PASSWORD, TOKEN_SCOPE };
+    const missingKc = Object.keys(kcVars).filter(key => !kcVars[key]);
+    if (missingKc.length > 0) {
+        console.error(`❌ ERROR: AUTH_TYPE='bearer' dan BEARER_TOKEN kosong.`);
+        console.error(`Skrip perlu mengambil token, tapi variabel ini tidak diset di run.sh: ${missingKc.join(', ')}`);
+        console.error("Proses Patient Merge dibatalkan.");
+        return;
+    }
+  }
+
+  // Validasi kondisional (jika auth 'basic')
+  if (AUTH_TYPE === 'basic') {
+      if (!BASIC_USER || !BASIC_PASS) {
+          console.error(`❌ ERROR: AUTH_TYPE='basic', tapi BASIC_USER atau BASIC_PASS kosong di run.sh.`);
+          console.error("Proses Patient Merge dibatalkan.");
+          return;
+      }
+  }
+
+  console.log("✅ Konfigurasi (Patient Merge) valid.");
+  
   await setupAuth();
 
   // Setup logging
@@ -261,7 +315,7 @@ async function main() {
   // --- 1. Build PatientID -> Issuers map ---
   console.log('Building PatientID -> issuers map...');
   const pidIssuersMap = new Map();
-  const seen = new Set(); // To avoid processing the same PID|Issuer pair twice
+  const seen = new Set();
   let offset = 0;
 
   while (true) {
@@ -273,25 +327,17 @@ async function main() {
       break;
     }
 
-    if (!Array.isArray(pageJson)) {
-      console.warn(`Expected array from QIDO, got: ${typeof pageJson}. Stopping pagination.`);
-      break;
-    }
-    
-    if (pageJson.length === 0) {
+    if (!Array.isArray(pageJson) || pageJson.length === 0) {
       console.log('No more patients found.');
-      break; // All pages processed
+      break; 
     }
-    
-    console.log(`Processing ${pageJson.length} patients from offset ${offset}...`);
 
     for (const patient of pageJson) {
       try {
         const pid = patient['00100020']?.Value[0];
-        const issuer = patient['00100021']?.Value[0] ?? ''; // Use empty string for null/undefined issuer
+        const issuer = patient['00100021']?.Value[0] ?? ''; 
 
         if (!pid) continue;
-
         const key = `${pid}|${issuer}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -316,40 +362,60 @@ async function main() {
   for (const [pid, issuersSet] of pidIssuersMap.entries()) {
     const issuers = Array.from(issuersSet);
 
-    // If already only canonical, skip
     if (issuers.length === 1 && issuers[0] === CANON) {
       continue;
     }
-
     console.log(`Processing PID ${pid} with issuers: [${issuers.join(', ')}]`);
 
-    // Choose a seed issuer (prefer canonical if present)
+    // 1. Cek: Apakah hanya ada 1 issuer DAN itu adalah <empty>? (Kasus HTTP 409)
+    if (issuers.length === 1 && !issuers[0]) {
+        if (!DRY_RUN) {
+            console.warn(`  [SKIP/409] Hanya ada issuer <empty>. Server akan menolak (409). Dilewatkan untuk diatasi di SQL Cleanup.`);
+            const now = new Date().toISOString();
+            // Log ke CSV sebagai 409 SKIP
+            const logLine = `${now},${pid},<empty>,${CANON},merge,SKIP_409_EMPTY\n`;
+            fs.appendFileSync(OPS_CSV, logLine);
+            continue; 
+        }
+    }
+    
     let seed = issuers.find(iss => iss === CANON);
     if (!seed) {
-      // Find any non-canonical, non-empty, non-DCM4CHEE.null.null issuer as seed
       seed = issuers.find(iss => iss && iss !== CANON && iss !== 'DCM4CHEE.null.null');
     }
-    // If still no seed, use the first available (which might be empty string)
     if (seed === undefined) {
       seed = issuers[0];
     }
 
-    // Prepare demographics payload
     const demo = await pickDemoForPid(pid);
-    const payload = buildPayload(pid, demo.name, demo.dob, demo.sex);
 
-    // 1) If seed != canonical, merge seed -> canonical first (to establish canonical row)
+    // 2. Cek: Apakah data Demografi kosong? (Kasus HTTP 500)
+    if (!demo.name && !demo.dob && !demo.sex) {
+        if (!DRY_RUN) { // Hanya skip di mode LIVE (untuk mencegah 500)
+            console.warn(` [SKIP/500] Demografi kosong. Melewatkan merge untuk menghindari server crash (NPE).`);
+            // Tambahkan logging ERR_SKIPPED_NO_DEMO ke CSV di sini
+            const now = new Date().toISOString();
+            const logLine = `${now},${pid},[${issuers.join(';')}],${CANON},merge,SKIP_500_NO_DEMO\n`;
+            fs.appendFileSync(OPS_CSV, logLine);
+            continue; // Lanjut ke pasien berikutnya
+        }
+    }
+    
+    const payload = buildPayload(pid, demo.name, demo.dob, demo.sex);
+    
     if (seed !== CANON) {
       console.log(`  Merging seed '${seed || '<empty>'}' -> ${CANON}`);
       await doMerge(pid, seed, payload);
     }
 
-    // 2) Merge every other variant (including empty) into canonical
     for (const iss of issuers) {
-      // Skip the seed (if it wasn't canonical) since we just merged it
+      
       if (iss === seed && seed !== CANON) continue;
-      // Skip the canonical issuer itself
       if (iss === CANON) continue;
+
+      if (!iss) { // Jika 'iss' adalah string kosong atau null
+        continue; // Lanjut ke issuer berikutnya
+      }
       
       console.log(`  Merging variant '${iss || '<empty>'}' -> ${CANON}`);
       await doMerge(pid, iss, payload);
@@ -357,10 +423,11 @@ async function main() {
   }
 
   console.log(`Done. Log: ${OPS_CSV}`);
+  if (DRY_RUN) {
+    console.log('[INFO] Ini adalah DRY RUN. Tidak ada data yang diubah.');
+    console.log(`[INFO] Cek operasinya di: ${OPS_CSV}`);
+  }
 }
 
-// Run the script
-main().catch(err => {
-  console.error('An unhandled error occurred:', err.message);
-  process.exit(1);
-});
+
+module.exports = runPatientMerge;

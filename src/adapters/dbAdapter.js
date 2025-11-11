@@ -40,6 +40,19 @@ class DBAdapter {
       }
     }
   }
+
+  async query(sqlString) {
+    if (!this.client) {
+      throw new Error("Client not connected. Call connect() first.");
+    }
+    try {
+      // client.query dari 'pg' bisa menjalankan seluruh skrip (BEGIN...COMMIT)
+      return await this.client.query(sqlString);
+    } catch (err) {
+      console.error(`❌ Gagal saat eksekusi kueri: ${err.message}`);
+      throw err;
+    }
+  }
 }
 
 module.exports = DBAdapter;
