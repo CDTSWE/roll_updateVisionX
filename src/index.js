@@ -44,7 +44,7 @@ async function main() {
       console.log("\n=== SSH Process ===");
       const ssh = new SSHAdapter(env);
       await ssh.connect();
-      await deployYamlFiles(ssh, env); 
+      await deployYamlFiles(ssh, env);
       await ssh.disconnect();
       console.log("✓ SSH Process Completed.");
     } else {
@@ -84,30 +84,25 @@ async function main() {
 
     // --- Proses Clean Data (Patient Merge LENGKAP) ---
     if (runMerge.toLowerCase() === "y") {
-      // Hanya baca DRY_RUN global SATU KALI
-      const DRY_RUN = (process.env.DRY_RUN || 'false').toLowerCase() === 'true';
+      // DRY_RUN dibaca langsung dari environment variables
+      const DRY_RUN = (process.env.DRY_RUN || 'false').toLowerCase() === 'true'; 
+      
+      // Helper untuk logging (menggunakan console.warn hanya jika tidak DRY RUN)
+      const log = DRY_RUN ? console.log : console.warn; 
 
       // --- AKSI 1: Membersihkan PACS (dcm4chee) ---
-      console.log("\n=== 1. Cleaner Process (Patient Merge - PACS) ===");
-      if (DRY_RUN) {
-          console.log("[INFO] Menjalankan Aksi 1 (PACS) dalam mode DRY RUN...");
-      } else {
-          console.log("[PERINGATAN] Menjalankan Aksi 1 (PACS) dalam mode LIVE...");
-      }
-      // Skrip ini akan patuh pada DRY_RUN global
+      console.log(`\n=== 1. Cleaner Process (PACS) ===`);
+      
+      // runPatientMerge akan otomatis menggunakan DRY_RUN dari process.env
       await runPatientMerge(); 
       console.log("✓ Cleaner Process (PACS) Completed.");
 
       // --- AKSI 2: Membersihkan Database (Supabase) ---
-      console.log("\n=== 2. Cleaner Process (Patient Merge - Database) ===");
+      console.log(`\n=== 2. Cleaner Process (Database) ===`);
 
-      // TIDAK ADA PERTANYAAN KEDUA. Langsung patuh pada DRY_RUN global.
-      if (DRY_RUN) {
-          console.log("[INFO] Menjalankan Aksi 2 (Database) dalam mode DRY RUN (ROLLBACK)...");
-      } else {
-          console.log("[PERINGATAN] Menjalankan Aksi 2 (Database) dalam mode LIVE (COMMIT)...");
-          console.log("!!! DATA DATABASE (SUPABASE) AKAN DIUBAH PERMANEN DALAM 5 DETIK !!!");
-          // Tetap berikan jeda keamanan
+      if (!DRY_RUN) {
+          console.warn("!!! DATA DATABASE (SUPABASE) AKAN DIUBAH PERMANEN DALAM 5 DETIK !!!");
+          // Berikan jeda keamanan hanya di mode LIVE
           await new Promise(resolve => setTimeout(resolve, 5000)); 
       }
 
@@ -117,8 +112,7 @@ async function main() {
           await db.connect();
           console.log("Koneksi database berhasil.");
           
-          // Skrip ini akan patuh pada DRY_RUN global
-          await runPatientCleanupSQL(db); 
+          await runPatientCleanupSQL(db, DRY_RUN); 
           
       } catch (sqlError) {
           console.error("💥 GAGAL saat menjalankan SQL cleanup:", sqlError.message);
@@ -129,9 +123,8 @@ async function main() {
           }
       }
       console.log("✓ Cleaner Process (Database) Completed.");
-
     } else {
-      console.log("\n⏭️ Skipping Cleaner (Patient Merge) process.");
+        console.log("\n⏭️ Skipping Cleaner (Patient Merge) process.");
     }
 
     console.log("\n🚀 All requested deployments completed!");

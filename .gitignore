@@ -2,3 +2,4 @@ node_modules
 supabase
 supabase-project
 merge_logs_*
+auto_sync*
