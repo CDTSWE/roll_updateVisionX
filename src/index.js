@@ -6,6 +6,7 @@ const deployYamlFiles = require("./usecases/deployYamlFiles");
 const updateDatabase = require("./usecases/updateDatabase");
 const updateMirthChannel = require("./usecases/updateMirthChannel");
 const AskHelper = require("./utils/readline");
+const recountInstances = require("./cleaner/recount_instances");
 
 async function main() {
   const ask = new AskHelper();
@@ -16,6 +17,7 @@ async function main() {
     runSsh = await ask.ask("Jalankan proses SSH? (y/n) ");
     runDb = await ask.ask("Jalankan proses Database? (y/n) ");
     runMirth = await ask.ask("Jalankan proses Mirth? (y/n) ");
+    runCleaner = await ask.ask("Jalankan proses Cleaner (Recount Instances)? (y/n) ");
   } catch (err) {
     console.error("💥 Gagal saat proses tanya jawab:", err);
     process.exit(1);
@@ -56,6 +58,15 @@ async function main() {
       console.log("✓ Mirth Process Completed.");
     } else {
       console.log("\n⏭️ Skipping Mirth process.");
+    }
+
+    // --- Proses Clean Data ---
+    if (runCleaner.toLowerCase() === "y") {
+      console.log("\n=== Cleaner Process (Recount) ===");
+      await recountInstances(); 
+      console.log("✓ Cleaner Process (Recount) Completed.");
+    } else {
+      console.log("\n⏭️ Skipping Cleaner process.");
     }
 
     console.log("\n🚀 All requested deployments completed!");

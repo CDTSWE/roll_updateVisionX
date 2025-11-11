@@ -72,8 +72,7 @@ export KC_CLIENT_ID="dcm4chee-arc-ui"
 export KC_CLIENT_SECRET="changeit"
 export KC_USERNAME="admin"
 export KC_PASSWORD="${KEYCLOAK_PASSWORD}"
-export DRY_RUN="false"
-export KC_SCOPE="openid"
+export DRY_RUN="true"
 
 # --- 4. Config Auth Bearer Token (multiple patient) ---
 export CANON="elvasoft"
