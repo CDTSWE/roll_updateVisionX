@@ -111,7 +111,7 @@ update_image() {
 
   echo "🚀 Running script..."
   npm start
-  node "./scripts/clean_data/clean_mwl_status.js"
+  nnode "./src/cleaner/clean_mwl_status.js"
 
   # echo ""
   # echo "✅ Skrip utama selesai."
