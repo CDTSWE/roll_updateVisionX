@@ -111,7 +111,13 @@ update_image() {
 
   echo "🚀 Running script..."
   npm start
-  nnode "./src/cleaner/clean_mwl_status.js"
+  read -p "You want to Clean MWL Status? (y/n) " CLEAN_MWL_STATUS_CHOICE
+  if [[ "${CLEAN_MWL_STATUS_CHOICE,,}" == "y" || "${CLEAN_MWL_STATUS_CHOICE,,}" == "yes" ]]; then
+    echo "Running clean MWL status script..."
+    node "./src/cleaner/clean_mwl_status.js"
+  else
+    echo "Skipping clean MWL status script."
+  fi
   
 }
 
