@@ -20,6 +20,9 @@ export SSH_PORT=8022
 export SSH_USER="klbfadmin"
 export SSH_PASSWORD="klbfadmin"
 
+# LOCAL CONFIGURATION
+export LOCAL_BASE_PATH="/home/klbfadmin/installation-file/visionx"
+
 export RIS_IMAGE_VERSION="image: kalbedevops.azurecr.io/elvasoft-ris:"
 export BLUE_HALO_IMAGE_VERSION="image: kalbedevops.azurecr.io/vision/blue-halo:"
 export OHIF_IMAGE_VERSION="image: kalbedevops.azurecr.io/visionx-ohif:"
