@@ -50,7 +50,8 @@ async function main() {
       consoleUtils.section("Update Image Process (No SSH)");
       const local = new LocalAdapter(env);
       await local.connect(); // does nothing
-      await deployYamlFiles(local, env);
+      await deployYamlFiles(local, env, ask);
+
       await local.disconnect(); // does nothing
       consoleUtils.success("LOCAL Process Completed.");
     } else {

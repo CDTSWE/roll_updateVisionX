@@ -1,4 +1,4 @@
-async function deployYamlFiles(adapter, config) {
+async function deployYamlFiles(adapter, config, askHelper) {
   const yamlFiles = [
     { remote: config.RIS_YAML_FILE, version: config.RIS_IMAGE_VERSION },
     {
@@ -9,6 +9,8 @@ async function deployYamlFiles(adapter, config) {
   ];
 
   for (const file of yamlFiles) {
-    await adapter.updateAndApplyFile(file.remote, file.version);
+    await adapter.updateAndApplyFile(file.remote, file.version, askHelper);
   }
 }
+
+module.exports = deployYamlFiles;
