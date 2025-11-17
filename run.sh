@@ -14,12 +14,6 @@ export SUPABASE_DATABASE="postgres"
 export SUPABASE_USER="supabase_admin"
 export SUPABASE_PASSWORD="visionX123"
 
-# SSH CONFIGURATION
-export SSH_HOST="10.0.0.11"
-export SSH_PORT=8022
-export SSH_USER="klbfadmin"
-export SSH_PASSWORD="klbfadmin"
-
 # LOCAL CONFIGURATION
 export LOCAL_BASE_PATH="/home/klbfadmin/installation-file/visionx"
 
@@ -27,6 +21,7 @@ export RIS_IMAGE_VERSION="image: kalbedevops.azurecr.io/elvasoft-ris:"
 export BLUE_HALO_IMAGE_VERSION="image: kalbedevops.azurecr.io/vision/blue-halo:"
 export OHIF_IMAGE_VERSION="image: kalbedevops.azurecr.io/visionx-ohif:"
 
+# YAML FILE CONFIGURATION
 export RIS_YAML_FILE="ris.yaml"
 export BLUE_HALO_YAML_FILE="07-blue-halo.yaml"
 export OHIF_YAML_FILE="05-ohif.yaml"
@@ -53,9 +48,6 @@ export SERVICE_REQUEST_HTTP_SENDER="${URL}elvasoft/fhir/4_0_0/ServiceRequest/\${
 export PROCEDURE_HTTP_SENDER="${URL}elvasoft/fhir/4_0_0/Procedure/\${UpdatedAccessionNumber}"
 export SEND_AUDIT_LOG="${URL}elvasoft/base/rest/v1/audit_log"
 export SEND_AUDIT_TRAIL="${URL}elvasoft/base/rest/v1/audit_trail"
-
-# KEYCLOAK PASSWORD
-export KEYCLOAK_PASSWORD="changeit"
 
 # ======== CLEAN NUMBER OF INSTANCE ========
 

@@ -1,5 +1,4 @@
 const { exec } = require("child_process");
-const AskHelper = require("../utils/readline");
 const consoleUtils = require("../utils/consoleUtils");
 
 function execCommand(command) {
@@ -16,14 +15,6 @@ class LocalAdapter {
     this.remoteBasePath = config.LOCAL_BASE_PATH;
   }
 
-  async connect() {
-    consoleUtils.info("Local mode: no SSH connection needed.");
-  }
-
-  async disconnect() {
-    consoleUtils.info("Local mode: nothing to disconnect.");
-  }
-
   async execCommand(cmd) {
     return await execCommand(cmd);
   }
@@ -35,8 +26,6 @@ class LocalAdapter {
       try {
         result = await execCommand(grepCommand);
       } catch (grepErr) {
-        // If grep doesn't find any matches, it returns a non-zero exit code
-        // In this case, we'll show a message and continue without updating
         consoleUtils.warn(
           `No image lines found in ${remoteFilename} or file is empty.`,
         );
@@ -49,8 +38,6 @@ class LocalAdapter {
           return;
         }
 
-        // If user wants to proceed, we can't update without knowing the current image
-        // So we'll ask for the current image format to replace
         const currentImage = await askHelper.ask(
           `Enter the current image pattern to replace (or leave empty to add to file): `,
         );
@@ -100,7 +87,6 @@ class LocalAdapter {
         `Enter the image version to update (x.x.x): `,
       );
 
-      // Escape special characters in the result.stdout for sed
       const escapedOriginal = result.stdout
         .trim()
         .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -125,7 +111,7 @@ class LocalAdapter {
       }
     } catch (err) {
       consoleUtils.error(`LocalAdapter error: ${err}`);
-      throw err; // Re-throw to be handled by the calling function
+      throw err;
     }
   }
 }
