@@ -39,9 +39,7 @@ async function main() {
     } catch (err) {
       consoleUtils.error(`Gagal saat proses tanya jawab: ${err.message}`);
       process.exit(1);
-    } finally {
-      await ask.close();
-    }
+    } 
 
     // --- Bagian Eksekusi Utama ---
 

@@ -7,6 +7,9 @@ const env = {
   SSH_USER: process.env.SSH_USER,
   SSH_PASSWORD: process.env.SSH_PASSWORD,
 
+  // Local Base Path
+  LOCAL_BASE_PATH: process.env.LOCAL_BASE_PATH,
+
   // Image Version
   RIS_IMAGE_VERSION: process.env.RIS_IMAGE_VERSION,
   BLUE_HALO_IMAGE_VERSION: process.env.BLUE_HALO_IMAGE_VERSION,
