@@ -16,12 +16,9 @@ const runPatientMerge = require("./cleaner/multiplePatient.js");
 const runPatientCleanupSQL = require("./usecases/runPatientCleanupSQL");
 
 async function main() {
-  // 1. Buat 'ask' HANYA SATU KALI
   const ask = new AskHelper();
 
-  // 2. Letakkan SEMUA proses di dalam SATU BLOK try...finally
   try {
-    // --- Bagian Pertanyaan Awal ---
     let runSsh, runDb, runMirth;
     let runRecount, runMerge;
 
@@ -39,7 +36,7 @@ async function main() {
     } catch (err) {
       consoleUtils.error(`Gagal saat proses tanya jawab: ${err.message}`);
       process.exit(1);
-    } 
+    }
 
     // --- Bagian Eksekusi Utama ---
 
@@ -47,11 +44,8 @@ async function main() {
     if (runSsh.toLowerCase() === "y") {
       consoleUtils.section("Update Image Process (No SSH)");
       const local = new LocalAdapter(env);
-      await local.connect(); // does nothing
       await deployYamlFiles(local, env, ask);
-
-      await local.disconnect(); // does nothing
-      consoleUtils.success("LOCAL Process Completed.");
+      consoleUtils.success("Update Image Process Completed.");
     } else {
       consoleUtils.skipped("Skipping SSH process.");
     }
@@ -89,27 +83,21 @@ async function main() {
 
     // --- Proses Clean Data (Patient Merge LENGKAP) ---
     if (runMerge.toLowerCase() === "y") {
-      // DRY_RUN dibaca langsung dari environment variables
       const DRY_RUN = (process.env.DRY_RUN || "false").toLowerCase() === "true";
 
-      // Helper untuk logging (menggunakan console.warn hanya jika tidak DRY RUN)
       const log = DRY_RUN ? consoleUtils.info : consoleUtils.warn;
 
-      // --- AKSI 1: Membersihkan PACS (dcm4chee) ---
       consoleUtils.section("1. Cleaner Process (PACS)");
 
-      // runPatientMerge will automatically use DRY_RUN from process.env
       await runPatientMerge();
       consoleUtils.success("Cleaner Process (PACS) Completed.");
 
-      // --- AKSI 2: Membersihkan Database (Supabase) ---
       consoleUtils.section("2. Cleaner Process (Database)");
 
       if (!DRY_RUN) {
         consoleUtils.warn(
           "DATA DATABASE (SUPABASE) AKAN DIUBAH PERMANEN DALAM 5 DETIK!",
         );
-        // Berikan jeda keamanan hanya di mode LIVE
         consoleUtils.warn("Delaying for 5 seconds as safety measure...");
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
@@ -138,11 +126,9 @@ async function main() {
 
     consoleUtils.success("All requested deployments completed!");
   } catch (err) {
-    // Menangkap error dari seluruh proses eksekusi
     consoleUtils.error(`Error saat eksekusi proses: ${err.message}`);
     process.exit(1);
   } finally {
-    // 3. PANGGIL 'ask.close()' DI SINI, DI AKHIR SEMUANYA
     ask.close();
   }
 }
