@@ -8,31 +8,31 @@ set -euo pipefail
 # ======== UPDATE IMAGE, SUPABASE & MIRTH ========
 
 # SUPABASE CONFIGURATION
-export SUPABASE_HOST="localhost"
+export SUPABASE_HOST="10.43.226.207"
 export SUPABASE_PORT=5432
 export SUPABASE_DATABASE="postgres"
-export SUPABASE_USER="postgres.your-tenant-id"
-export SUPABASE_PASSWORD="your-super-secret-and-long-postgres-password"
+export SUPABASE_USER="supabase_admin"
+export SUPABASE_PASSWORD="visionX123"
 
 # SSH CONFIGURATION
-export SSH_HOST="70.153.25.44"
-export SSH_PORT=22
-export SSH_USER="elvasoftk3s"
-export SSH_PASSWORD="3lvas0ftK3S!"
+export SSH_HOST="10.0.0.11"
+export SSH_PORT=8022
+export SSH_USER="klbfadmin"
+export SSH_PASSWORD="klbfadmin"
 
 export RIS_IMAGE_VERSION="image: kalbedevops.azurecr.io/elvasoft-ris:"
 export BLUE_HALO_IMAGE_VERSION="image: kalbedevops.azurecr.io/vision/blue-halo:"
 export OHIF_IMAGE_VERSION="image: kalbedevops.azurecr.io/visionx-ohif:"
 
-export RIS_YAML_FILE="06-ris.yaml"
+export RIS_YAML_FILE="ris.yaml"
 export BLUE_HALO_YAML_FILE="07-blue-halo.yaml"
 export OHIF_YAML_FILE="05-ohif.yaml"
 
 # MIRTH CONFIGURATION
 export MIRTH_HOST="https://localhost"
-export MIRTH_PORT=8448
-export MIRTH_USERNAME="admin"
-export MIRTH_PASSWORD="demo"
+export MIRTH_PORT=8443
+export MIRTH_USERNAME="klbfadmin"
+export MIRTH_PASSWORD="klbfadmin"
 
 # DESTINATION CONNECTOR
 URL="http://10.0.0.11/"
@@ -71,7 +71,7 @@ export KC_TOKEN_URL="${URL}elvasoft/ksf/realms/dcm4che/protocol/openid-connect/t
 export KC_CLIENT_ID="dcm4chee-arc-ui"
 export KC_CLIENT_SECRET="changeit"
 export KC_USERNAME="admin"
-export KC_PASSWORD="${KEYCLOAK_PASSWORD}"
+export KC_PASSWORD="changeit"
 export DRY_RUN="false"
 
 # --- 4. Config Auth Bearer Token (multiple patient) ---

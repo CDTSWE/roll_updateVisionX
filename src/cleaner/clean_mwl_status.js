@@ -1,17 +1,15 @@
-#!/usr/bin/env node
-
 const fs = require("fs");
 const path = require("path");
 const { URLSearchParams } = require("url");
 const consoleUtils = require("../utils/consoleUtils");
 
 // =================== CONFIG ===================
-const FHIR_BASE = process.env.FHIR_BAS;
+const FHIR_BASE = process.env.FHIR_BASE;
 const DCM_BASE = process.env.DCM_BASE;
 const DCM_AET = process.env.DCM_AET;
 const DCM_QIDO = process.env.DCM_QIDO;
 const DCM_MWL = process.env.DCM_MWL;
-const KC_SCOPE = process.env.KC_SCOPE;
+const TOKEN_SCOPE = process.env.TOKEN_SCOPE;
 
 const KC_TOKEN_URL = process.env.KC_TOKEN_URL;
 const KC_CLIENT_ID = process.env.KC_CLIENT_ID;
@@ -73,7 +71,7 @@ function debugSave(filename, content) {
     const filepath = path.join(DEBUG_DIR, filename);
     fs.writeFileSync(
       filepath,
-      typeof content === "string" ? content : JSON.stringify(content, null, 2)
+      typeof content === "string" ? content : JSON.stringify(content, null, 2),
     );
   } catch (err) {
     // Ignore debug save errors
@@ -118,7 +116,7 @@ async function getKeycloakToken() {
     params.append("client_secret", KC_CLIENT_SECRET);
     params.append("username", KC_USERNAME);
     params.append("password", KC_PASSWORD);
-    params.append("scope", KC_SCOPE);
+    params.append("scope", TOKEN_SCOPE);
 
     const response = await fetch(KC_TOKEN_URL, {
       method: "POST",
@@ -127,14 +125,14 @@ async function getKeycloakToken() {
     });
 
     verboseLog(
-      `Keycloak response: HTTP ${response.status} ${response.statusText}`
+      `Keycloak response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
       const errorText = await response.text();
       verboseLog(`Keycloak error response: ${errorText}`);
       throw new Error(
-        `Failed to get Keycloak token: ${response.statusText} - ${errorText}`
+        `Failed to get Keycloak token: ${response.statusText} - ${errorText}`,
       );
     }
 
@@ -162,7 +160,7 @@ async function getKeycloakToken() {
  */
 async function qidoUidByAccession(accession, token) {
   const url = `${DCM_QIDO}/studies?00080050=${enc(
-    accession
+    accession,
   )}&includedefaults=false&includefield=0020000D&includefield=00100020&includefield=00080050`;
   verboseLog(`QIDO query by accession: ${url}`);
 
@@ -180,7 +178,7 @@ async function qidoUidByAccession(accession, token) {
       const errorText = await response.text();
       debugSave(
         `qido_${accession}.json`,
-        `HTTP ${response.status}: ${errorText}`
+        `HTTP ${response.status}: ${errorText}`,
       );
       verboseLog(`QIDO query failed: ${errorText}`);
       return [];
@@ -191,7 +189,7 @@ async function qidoUidByAccession(accession, token) {
     verboseLog(
       `QIDO query result: ${
         Array.isArray(data) ? data.length : 0
-      } studies found`
+      } studies found`,
     );
 
     return Array.isArray(data) ? data : [];
@@ -214,7 +212,7 @@ async function updateStudyMetadata(
   refDoc,
   clinical,
   patientId,
-  token
+  token,
 ) {
   const payload = {
     "0020000D": { vr: "UI", Value: [studyUid] },
@@ -242,7 +240,7 @@ async function updateStudyMetadata(
   verboseLog(`Updating study metadata: ${url}`);
   debugSave(
     `update_payload_${studyUid}.json`,
-    JSON.stringify(payload, null, 2)
+    JSON.stringify(payload, null, 2),
   );
 
   if (DRY_RUN) {
@@ -263,7 +261,7 @@ async function updateStudyMetadata(
 
     const code = response.status.toString();
     verboseLog(
-      `Study metadata update response: HTTP ${code} ${response.statusText}`
+      `Study metadata update response: HTTP ${code} ${response.statusText}`,
     );
 
     return code;
@@ -282,10 +280,10 @@ async function moveStudyToPatient(
   patientName,
   patientSex,
   patientBirthDate,
-  token
+  token,
 ) {
   let query = `PatientID=${enc(patientId)}&PatientName=${enc(
-    patientName
+    patientName,
   )}&PatientSex=${enc(patientSex)}`;
   if (patientBirthDate) {
     query += `&PatientBirthDate=${enc(patientBirthDate)}`;
@@ -325,7 +323,7 @@ async function moveStudyToPatient(
  */
 async function checkMwlExists(accession, token) {
   const url = `${DCM_MWL}/mwlitems?00080050=${enc(
-    accession
+    accession,
   )}&includedefaults=false`;
   verboseLog(`Checking MWL: ${url}`);
 
@@ -338,14 +336,14 @@ async function checkMwlExists(accession, token) {
     });
 
     verboseLog(
-      `MWL check response: HTTP ${response.status} ${response.statusText}`
+      `MWL check response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
       const errorText = await response.text();
       debugSave(
         `mwl_${accession}.json`,
-        `HTTP ${response.status}: ${errorText}`
+        `HTTP ${response.status}: ${errorText}`,
       );
       verboseLog(`MWL check failed: ${errorText}`);
       return "not_exists";
@@ -354,7 +352,7 @@ async function checkMwlExists(accession, token) {
     const data = await response.json();
     debugSave(`mwl_${accession}.json`, JSON.stringify(data, null, 2));
     verboseLog(
-      `MWL check result: ${Array.isArray(data) ? data.length : 0} items found`
+      `MWL check result: ${Array.isArray(data) ? data.length : 0} items found`,
     );
 
     if (Array.isArray(data) && data.length > 0) {
@@ -378,7 +376,7 @@ async function mwlComplete(study225, sps, token) {
   }
 
   const url = `${DCM_MWL}/mwlitems/${enc(study225)}/${enc(
-    sps
+    sps,
   )}/status/COMPLETED`;
   verboseLog(`Completing MWL: ${url}`);
 
@@ -424,7 +422,7 @@ async function fetchServiceRequestBundle(token) {
     });
 
     verboseLog(
-      `ServiceRequest bundle response: HTTP ${response.status} ${response.statusText}`
+      `ServiceRequest bundle response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
@@ -434,7 +432,7 @@ async function fetchServiceRequestBundle(token) {
     const data = await response.json();
     debugSave("sr_bundle.json", JSON.stringify(data, null, 2));
     verboseLog(
-      `ServiceRequest bundle: ${data.entry?.length || 0} entries found`
+      `ServiceRequest bundle: ${data.entry?.length || 0} entries found`,
     );
     return data;
   } catch (error) {
@@ -460,7 +458,7 @@ async function fetchServiceRequestById(serviceRequestId, token) {
     });
 
     verboseLog(
-      `  ServiceRequest response: HTTP ${response.status} ${response.statusText}`
+      `  ServiceRequest response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
@@ -472,7 +470,7 @@ async function fetchServiceRequestById(serviceRequestId, token) {
     return data;
   } catch (error) {
     log(
-      `  ERROR fetching ServiceRequest ${serviceRequestId}: ${error.message}`
+      `  ERROR fetching ServiceRequest ${serviceRequestId}: ${error.message}`,
     );
     verboseLog(`  ServiceRequest fetch error details: ${error.stack}`);
     return null;
@@ -495,7 +493,7 @@ async function fetchPatient(patientId, token) {
     });
 
     verboseLog(
-      `  Patient response: HTTP ${response.status} ${response.statusText}`
+      `  Patient response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
@@ -635,7 +633,7 @@ async function deleteResourcesByBasedOn(basedOnRef, resourceType, token) {
       for (const entry of data.entry) {
         if (entry.resource && entry.resource.id) {
           const resourceUrl = `${FHIR_BASE}/${resourceType}/${enc(
-            entry.resource.id
+            entry.resource.id,
           )}`;
           await fhirDeleteWithEtag(resourceUrl, token);
         }
@@ -704,7 +702,7 @@ async function fetchProcedure(procedureId, token) {
     });
 
     verboseLog(
-      `  Procedure response: HTTP ${response.status} ${response.statusText}`
+      `  Procedure response: HTTP ${response.status} ${response.statusText}`,
     );
 
     if (!response.ok) {
@@ -836,7 +834,7 @@ async function putImagingStudy(imagingStudyId, imagingStudyData, token) {
 
     const code = response.status.toString();
     verboseLog(
-      `  ImagingStudy PUT response: HTTP ${code} ${response.statusText}`
+      `  ImagingStudy PUT response: HTTP ${code} ${response.statusText}`,
     );
     return code;
   } catch (error) {
@@ -858,7 +856,7 @@ async function main() {
   // Initialize audit CSV
   fs.writeFileSync(
     AUDIT_FILE,
-    "timestamp,unscheduled,scheduled,step,http_code,result,info\n"
+    "timestamp,unscheduled,scheduled,step,http_code,result,info\n",
   );
 
   log("=========================================");
@@ -994,7 +992,7 @@ async function main() {
     let studySearch = await qidoUidByAccession(base, token);
     debugSave(
       `study_search_${base}.json`,
-      JSON.stringify(studySearch, null, 2)
+      JSON.stringify(studySearch, null, 2),
     );
 
     let srcUid = studySearch[0]?.["0020000D"]?.Value?.[0] || "";
@@ -1007,7 +1005,7 @@ async function main() {
       studySearch = await qidoUidByAccession(uAcc, token);
       debugSave(
         `study_search_${uAcc}.json`,
-        JSON.stringify(studySearch, null, 2)
+        JSON.stringify(studySearch, null, 2),
       );
 
       srcUid = studySearch[0]?.["0020000D"]?.Value?.[0] || "";
@@ -1023,7 +1021,7 @@ async function main() {
 
     log(`  ✓ Found Study UID: ${srcUid}`);
     log(
-      `  Current: Patient=${currentPatientId}, Accession=${currentAccession}`
+      `  Current: Patient=${currentPatientId}, Accession=${currentAccession}`,
     );
 
     // Check if study needs to be moved to different patient
@@ -1037,7 +1035,7 @@ async function main() {
         pname,
         sex,
         birthDcm,
-        token
+        token,
       );
       log(`  MOVE result: http=${moveCode}`);
 
@@ -1062,7 +1060,7 @@ async function main() {
         refDoc,
         clinical,
         mrn,
-        token
+        token,
       );
       log(`  UPDATE result: http=${updateCode}`);
     }
@@ -1087,7 +1085,7 @@ async function main() {
     const isSearchUnsched = await searchImagingStudyByIdentifier(uAcc, token);
     debugSave(
       `is_search_unsched_${uAcc}.json`,
-      JSON.stringify(isSearchUnsched, null, 2)
+      JSON.stringify(isSearchUnsched, null, 2),
     );
     const isIdUnsched = isSearchUnsched.id;
 
@@ -1098,7 +1096,7 @@ async function main() {
       const isJson = await fetchImagingStudy(isIdUnsched, token);
       debugSave(
         `is_unsched_full_${isIdUnsched}.json`,
-        JSON.stringify(isJson, null, 2)
+        JSON.stringify(isJson, null, 2),
       );
 
       if (!isJson) {
@@ -1121,7 +1119,7 @@ async function main() {
         identifier: [
           { system: ACC_SYSTEM, value: base },
           ...(isJson.identifier || []).filter(
-            (id) => id.system === STUDYID_SYSTEM
+            (id) => id.system === STUDYID_SYSTEM,
           ),
         ],
       };
@@ -1144,7 +1142,7 @@ async function main() {
       log(`  → Deleting old ImagingStudy/${isIdUnsched} (to free Study UID)`);
       const isDelCode = await fhirDeleteWithEtag(
         `${FHIR_BASE}/ImagingStudy/${isIdUnsched}`,
-        token
+        token,
       );
       log(`  DELETE result: http=${isDelCode}`);
 
@@ -1156,22 +1154,22 @@ async function main() {
 
         if (!["200", "201"].includes(isCreateCode)) {
           log(
-            `  ❌ Failed to create new ImagingStudy after deletion (code=${isCreateCode})`
+            `  ❌ Failed to create new ImagingStudy after deletion (code=${isCreateCode})`,
           );
           log(
-            `  ⚠️  Data loss: original ImagingStudy deleted but new one not created`
+            `  ⚠️  Data loss: original ImagingStudy deleted but new one not created`,
           );
           log(
-            `  ⚠️  Backup stored in: ${DEBUG_DIR}/is_new_prepared_${base}.json`
+            `  ⚠️  Backup stored in: ${DEBUG_DIR}/is_new_prepared_${base}.json`,
           );
         } else {
           log(
-            `  ✅ Successfully migrated ImagingStudy from ${isIdUnsched} to ${base}`
+            `  ✅ Successfully migrated ImagingStudy from ${isIdUnsched} to ${base}`,
           );
         }
       } else {
         log(
-          `  ⚠️  Failed to delete unscheduled ImagingStudy (code=${isDelCode}), skipping creation`
+          `  ⚠️  Failed to delete unscheduled ImagingStudy (code=${isDelCode}), skipping creation`,
         );
       }
     } else {
@@ -1180,7 +1178,7 @@ async function main() {
       const isSearchBase = await searchImagingStudyByIdentifier(base, token);
       debugSave(
         `is_search_base_${base}.json`,
-        JSON.stringify(isSearchBase, null, 2)
+        JSON.stringify(isSearchBase, null, 2),
       );
       const isIdBase = isSearchBase.id;
 
@@ -1204,7 +1202,7 @@ async function main() {
           const isUpdateCode = await putImagingStudy(
             isIdBase,
             updatedIs,
-            token
+            token,
           );
           log(`  UPDATE result: http=${isUpdateCode}`);
         }
@@ -1233,7 +1231,7 @@ async function main() {
     // Delete unscheduled Procedure
     const procDelCode = await fhirDeleteWithEtag(
       `${FHIR_BASE}/Procedure/${uAcc}`,
-      token
+      token,
     );
     if (["200", "204", "404"].includes(procDelCode)) {
       log(`  DEL Procedure: http=${procDelCode}`);
@@ -1242,7 +1240,7 @@ async function main() {
     // Delete unscheduled ServiceRequest
     const srDelCode = await fhirDeleteWithEtag(
       `${FHIR_BASE}/ServiceRequest/${uAcc}`,
-      token
+      token,
     );
     log(`  DEL ServiceRequest: http=${srDelCode}`);
 
