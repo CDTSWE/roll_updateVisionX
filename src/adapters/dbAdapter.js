@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const consoleUtils = require('../utils/consoleUtils');
 
 class DBAdapter {
   constructor(config) {
@@ -14,16 +15,16 @@ class DBAdapter {
   }
 
   async connect() {
-    console.log(`🔁 Connecting to ${this.config.host}:${this.config.port} via Supabase...`);
+    consoleUtils.info(`Connecting to ${this.config.host}:${this.config.port} via Supabase...`);
     this.client = new Client(this.config);
     await this.client.connect();
-    console.log('✅ Connected to Supabase DB');
+    consoleUtils.success('Connected to Supabase DB');
   }
 
   async disconnect() {
     if (this.client) {
       await this.client.end();
-      console.log('🔌 DB connection closed');
+      consoleUtils.info('DB connection closed');
     }
   }
 
@@ -33,9 +34,9 @@ class DBAdapter {
       const sql = fs.readFileSync(path.join(dirPath, file), 'utf8');
       try {
         await this.client.query(sql);
-        console.log(`✅ Executed: ${file}`);
+        consoleUtils.success(`Executed: ${file}`);
       } catch (err) {
-        console.error(`❌ Failed on ${file}: ${err.message}`);
+        consoleUtils.error(`Failed on ${file}: ${err.message}`);
         throw err;
       }
     }
@@ -49,7 +50,7 @@ class DBAdapter {
       // client.query dari 'pg' bisa menjalankan seluruh skrip (BEGIN...COMMIT)
       return await this.client.query(sqlString);
     } catch (err) {
-      console.error(`❌ Gagal saat eksekusi kueri: ${err.message}`);
+      consoleUtils.error(`Gagal saat eksekusi kueri: ${err.message}`);
       throw err;
     }
   }

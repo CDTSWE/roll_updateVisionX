@@ -5,7 +5,7 @@ set -euo pipefail
 # CONFIG
 ############################################
 
-# ======== UPDATE IMAGE, SUPABASE & MIRTH ======== 
+# ======== UPDATE IMAGE, SUPABASE & MIRTH ========
 
 # SUPABASE CONFIGURATION
 export SUPABASE_HOST="localhost"
@@ -54,7 +54,7 @@ export SEND_AUDIT_TRAIL="${URL}elvasoft/base/rest/v1/audit_trail"
 # KEYCLOAK PASSWORD
 export KEYCLOAK_PASSWORD="changeit"
 
-# ======== CLEAN NUMBER OF INSTANCE ======== 
+# ======== CLEAN NUMBER OF INSTANCE ========
 
 # --- 1. Config Supabase API (PostgREST) ---
 export SUPABASE_URL="${URL}elvasoft/base"
@@ -118,7 +118,7 @@ update_image() {
   else
     echo "Skipping clean MWL status script."
   fi
-  
+
 }
 
 update_image
