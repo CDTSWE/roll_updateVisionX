@@ -1,78 +1,74 @@
-const { NodeSSH } = require("node-ssh");
-const fs = require("fs");
-const path = require("path");
-const AskHelper = require("./../utils/readline");
+const { exec } = require("child_process");
+const AskHelper = require("../utils/readline");
 const consoleUtils = require("../utils/consoleUtils");
 
-class SSHAdapter {
+function execCommand(command) {
+  return new Promise((resolve, reject) => {
+    exec(command, { shell: "/bin/bash" }, (error, stdout, stderr) => {
+      if (error) reject(stderr || error.message);
+      else resolve({ stdout, stderr });
+    });
+  });
+}
+
+class LocalAdapter {
   constructor(config) {
-    this.ssh = new NodeSSH();
-    this.config = {
-      host: config.SSH_HOST,
-      port: config.SSH_PORT,
-      username: config.SSH_USER,
-      password: config.SSH_PASSWORD,
-    };
-    this.remoteBasePath = "~/visionx/poc-update";
-    this.backupPath = `${this.remoteBasePath}/backup`;
+    this.remoteBasePath = config.LOCAL_BASE_PATH || "./visionx/poc-update";
   }
 
   async connect() {
-    consoleUtils.info(`Connecting to ${this.config.host} via SSH...`);
-    await this.ssh.connect(this.config);
-    consoleUtils.success("SSH connected");
+    consoleUtils.info("Local mode: no SSH connection needed.");
   }
 
   async disconnect() {
-    if (this.ssh.isConnected()) {
-      await this.ssh.dispose();
-      consoleUtils.info("SSH connection closed");
-    }
+    consoleUtils.info("Local mode: nothing to disconnect.");
+  }
+
+  async execCommand(cmd) {
+    return await execCommand(cmd);
   }
 
   async updateAndApplyFile(remoteFilename, imageVersion) {
     const askHelper = new AskHelper();
 
     try {
-      const showImageVersion = `sudo grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
-      const responseShowImageVersion = await this.ssh.execCommand(
-        showImageVersion
-      );
+      // Show current image version
+      const grepCommand = `grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
+      const result = await execCommand(grepCommand);
 
-      consoleUtils.info(`Current version: ${responseShowImageVersion.stdout}`);
+      consoleUtils.info(`Current version: ${result.stdout}`);
 
       const answer = await askHelper.ask(
         `Do you want to update ${remoteFilename} image? (y/n) `
       );
-
       if (answer.toLowerCase() === "n") {
         consoleUtils.skipped("Skipped");
-        return; // 'finally' akan tetap berjalan
-      } else if (answer.toLowerCase() === "y") {
-        const imageVersionAnswer = await askHelper.ask(
-          `Enter the image version you want to update (x.x.x): `
-        );
+        return;
+      }
 
-        let changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
-        if (responseShowImageVersion.stdout[0] == "-") {
-          changeVersion = `sed -i "s|${responseShowImageVersion.stdout}|- ${imageVersion}${imageVersionAnswer}|g" ${this.remoteBasePath}/${remoteFilename}`;
-        }
+      const newVersion = await askHelper.ask(
+        `Enter the image version to update (x.x.x): `
+      );
 
-        await this.ssh.execCommand(changeVersion);
+      // Build sed command
+      let sedCmd = `sed -i "s|${result.stdout}|${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
+      if (result.stdout.trim().startsWith("-")) {
+        sedCmd = `sed -i "s|${result.stdout}|- ${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
+      }
 
-        consoleUtils.success(`Success updated image version to ${imageVersionAnswer}`);
-        const deployAnswer = await askHelper.ask(
-          `Want to deploy ${remoteFilename} now? (y/n): `
-        );
+      await execCommand(sedCmd);
+      consoleUtils.success(`Updated image version → ${newVersion}`);
 
-        if (deployAnswer.toLowerCase() === "y") {
-          const deploy = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
-          await this.ssh.execCommand(deploy);
-          consoleUtils.success(`Deployed ${remoteFilename}`);
-        } else if (deployAnswer.toLowerCase() === "n") {
-          consoleUtils.skipped("Skipped deployment");
-          return;
-        }
+      const deployAnswer = await askHelper.ask(
+        `Deploy ${remoteFilename} now? (y/n): `
+      );
+
+      if (deployAnswer.toLowerCase() === "y") {
+        const deployCommand = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
+        await execCommand(deployCommand);
+        consoleUtils.success(`Deployed: ${remoteFilename}`);
+      } else {
+        consoleUtils.skipped("Deployment skipped.");
       }
     } finally {
       askHelper.close();
@@ -80,4 +76,4 @@ class SSHAdapter {
   }
 }
 
-module.exports = SSHAdapter;
+module.exports = LocalAdapter;

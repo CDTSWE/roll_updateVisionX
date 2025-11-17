@@ -47,12 +47,12 @@ async function main() {
 
     // --- Proses SSH ---
     if (runSsh.toLowerCase() === "y") {
-      consoleUtils.section("SSH Process");
-      const ssh = new SSHAdapter(env);
-      await ssh.connect();
-      await deployYamlFiles(ssh, env);
-      await ssh.disconnect();
-      consoleUtils.success("SSH Process Completed.");
+      consoleUtils.section("LOCAL Process (No SSH)");
+      const local = new LocalAdapter(env);
+      await local.connect(); // does nothing
+      await deployYamlFiles(local, env);
+      await local.disconnect(); // does nothing
+      consoleUtils.success("LOCAL Process Completed.");
     } else {
       consoleUtils.skipped("Skipping SSH process.");
     }
