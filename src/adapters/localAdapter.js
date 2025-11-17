@@ -29,11 +29,8 @@ class LocalAdapter {
     return await execCommand(cmd);
   }
 
-  async updateAndApplyFile(remoteFilename, imageVersion) {
-    const askHelper = new AskHelper();
-
+  async updateAndApplyFile(remoteFilename, imageVersion, askHelper) {
     try {
-      // Show current image version
       const grepCommand = `grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
       const result = await execCommand(grepCommand);
 
@@ -42,6 +39,7 @@ class LocalAdapter {
       const answer = await askHelper.ask(
         `Do you want to update ${remoteFilename} image? (y/n) `,
       );
+
       if (answer.toLowerCase() === "n") {
         consoleUtils.skipped("Skipped");
         return;
@@ -51,7 +49,6 @@ class LocalAdapter {
         `Enter the image version to update (x.x.x): `,
       );
 
-      // Build sed command
       let sedCmd = `sed -i "s|${result.stdout}|${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
       if (result.stdout.trim().startsWith("-")) {
         sedCmd = `sed -i "s|${result.stdout}|- ${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
@@ -71,8 +68,8 @@ class LocalAdapter {
       } else {
         consoleUtils.skipped("Deployment skipped.");
       }
-    } finally {
-      askHelper.close();
+    } catch (err) {
+      consoleUtils.error(`LocalAdapter error: ${err}`);
     }
   }
 }
