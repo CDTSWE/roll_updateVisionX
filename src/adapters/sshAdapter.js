@@ -2,6 +2,7 @@ const { NodeSSH } = require("node-ssh");
 const fs = require("fs");
 const path = require("path");
 const AskHelper = require("./../utils/readline");
+const consoleUtils = require("../utils/consoleUtils");
 
 class SSHAdapter {
   constructor(config) {
@@ -17,15 +18,15 @@ class SSHAdapter {
   }
 
   async connect() {
-    console.log(`🔁 Connecting to ${this.config.host} via SSH...`);
+    consoleUtils.info(`Connecting to ${this.config.host} via SSH...`);
     await this.ssh.connect(this.config);
-    console.log("✅ SSH connected");
+    consoleUtils.success("SSH connected");
   }
 
   async disconnect() {
     if (this.ssh.isConnected()) {
       await this.ssh.dispose();
-      console.log("🔻 SSH connection closed");
+      consoleUtils.info("SSH connection closed");
     }
   }
 
@@ -38,14 +39,14 @@ class SSHAdapter {
         showImageVersion
       );
 
-      console.log(`🔎 Current version: ${responseShowImageVersion.stdout}`);
+      consoleUtils.info(`Current version: ${responseShowImageVersion.stdout}`);
 
       const answer = await askHelper.ask(
         `Do you want to update ${remoteFilename} image? (y/n) `
       );
 
       if (answer.toLowerCase() === "n") {
-        console.log("⏭️ Skipped");
+        consoleUtils.skipped("Skipped");
         return; // 'finally' akan tetap berjalan
       } else if (answer.toLowerCase() === "y") {
         const imageVersionAnswer = await askHelper.ask(
@@ -59,7 +60,7 @@ class SSHAdapter {
 
         await this.ssh.execCommand(changeVersion);
 
-        console.log(`Success updated image version to ${imageVersionAnswer}`);
+        consoleUtils.success(`Success updated image version to ${imageVersionAnswer}`);
         const deployAnswer = await askHelper.ask(
           `Want to deploy ${remoteFilename} now? (y/n): `
         );
@@ -67,9 +68,9 @@ class SSHAdapter {
         if (deployAnswer.toLowerCase() === "y") {
           const deploy = `kubectl apply -f ${this.remoteBasePath}/${remoteFilename}`;
           await this.ssh.execCommand(deploy);
-          console.log(`✅ Deployed ${remoteFilename}`);
+          consoleUtils.success(`Deployed ${remoteFilename}`);
         } else if (deployAnswer.toLowerCase() === "n") {
-          console.log("⏭️ Skipped deployment");
+          consoleUtils.skipped("Skipped deployment");
           return;
         }
       }

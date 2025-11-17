@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { URLSearchParams } = require('url');
+const consoleUtils = require('../utils/consoleUtils');
 
 // =================== CONFIG ===================
 const {
@@ -45,7 +46,7 @@ const api = axios.create();
  * Fetches the OIDC token if required.
  */
 async function getToken() {
-  console.log('Attempting to fetch auth token...');
+  consoleUtils.info('Attempting to fetch auth token...');
   try {
     const params = new URLSearchParams();
     params.append('grant_type', 'password');
@@ -58,15 +59,15 @@ async function getToken() {
     const response = await axios.post(KC_TOKEN_URL, params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
-    
+
     const token = response.data?.access_token;
     if (!token) {
       throw new Error('access_token not found in response');
     }
-    console.log(`Token fetched successfully: ${token.substring(0, 20)}...`);
+    consoleUtils.success(`Token fetched successfully: ${token.substring(0, 20)}...`);
     return token;
   } catch (err) {
-    console.error('ERROR: Failed to fetch auth token.', err.response?.data || err.message);
+    consoleUtils.error(`Failed to fetch auth token: ${err.response?.data || err.message}`);
     throw err;
   }
 }
@@ -151,7 +152,7 @@ async function pickDemoForPid(pid) {
 
   } catch (err) {
     // Jika fetch gagal total (misal 404, 500, atau koneksi), dicatat dan lanjut ke Prioritas 2
-    console.warn(`Warning: Could not fetch patient records for ${pid}`, err.message);
+    consoleUtils.warn(`Could not fetch patient records for ${pid}: ${err.message}`);
   }
 
   // 2. Prioritas 2: Jika tidak ditemukan, dapatkan demo dari studi terbaru
@@ -190,7 +191,7 @@ async function pickDemoForPid(pid) {
     };
 
   } catch (err) {
-    console.warn(`Warning: Could not fetch studies for ${pid}`, err.message);
+    consoleUtils.warn(`Could not fetch studies for ${pid}: ${err.message}`);
     return { name: '', dob: '', sex: '' };
   }
 }
@@ -234,8 +235,8 @@ async function doMerge(pid, srcIssuer, payload) {
   const now = new Date().toISOString();
   
   if (DRY_RUN) {
-    console.log(`[DRY] PUT ${url}`);
-    console.log(`[DRY] DATA: ${JSON.stringify(payload)}`);
+    consoleUtils.info(`[DRY] PUT ${url}`);
+    consoleUtils.info(`[DRY] DATA: ${JSON.stringify(payload)}`);
     const logLine = `${now},${pid},${srcIssuerStr},${CANON},merge,DRY_RUN\n`;
     fs.appendFileSync(OPS_CSV, logLine);
     return;
@@ -254,11 +255,11 @@ async function doMerge(pid, srcIssuer, payload) {
     // Failure (non-2xx status)
     const httpCode = err.response?.status || 'ERR_NO_RESPONSE';
     const body = err.response?.data || err.message;
-    console.warn(`WARN: merge failed for ${pid} ${srcIssuerStr} -> ${CANON}, HTTP ${httpCode}`);
-    
+    consoleUtils.warn(`Merge failed for ${pid} ${srcIssuerStr} -> ${CANON}, HTTP ${httpCode}`);
+
     const logLine = `${now},${pid},${srcIssuerStr},${CANON},merge,ERR_${httpCode}\n`;
     fs.appendFileSync(OPS_CSV, logLine);
-    
+
     const errLogFile = path.join(LOG_DIR, `err_${pid}_${srcIssuer || 'EMPTY'}_${now.replace(/:/g, '-')}.log`);
     fs.writeFileSync(errLogFile, typeof body === 'object' ? JSON.stringify(body, null, 2) : String(body));
   }
@@ -269,15 +270,15 @@ async function doMerge(pid, srcIssuer, payload) {
  */
 async function runPatientMerge() {
 
-  console.log("Memvalidasi konfigurasi (Patient Merge) dari run.sh...");
-  
+  consoleUtils.info("Memvalidasi konfigurasi (Patient Merge) dari run.sh...");
+
   const requiredVars = { DCM_BASE, DCM_AET, CANON, AUTH_TYPE };
   const missing = Object.keys(requiredVars).filter(key => !requiredVars[key]);
 
   if (missing.length > 0) {
-      console.error(`❌ ERROR: Konfigurasi di run.sh tidak lengkap.`);
-      console.error(`Variabel berikut WAJIB di-export: ${missing.join(', ')}`);
-      console.error("Proses Patient Merge dibatalkan.");
+      consoleUtils.error(`Konfigurasi di run.sh tidak lengkap.`);
+      consoleUtils.error(`Variabel berikut WAJIB di-export: ${missing.join(', ')}`);
+      consoleUtils.error("Proses Patient Merge dibatalkan.");
       return; // Stop
   }
 
@@ -286,9 +287,9 @@ async function runPatientMerge() {
     const kcVars = { KC_TOKEN_URL, KC_CLIENT_ID, KC_CLIENT_SECRET, KC_USERNAME, KC_PASSWORD, TOKEN_SCOPE };
     const missingKc = Object.keys(kcVars).filter(key => !kcVars[key]);
     if (missingKc.length > 0) {
-        console.error(`❌ ERROR: AUTH_TYPE='bearer' dan BEARER_TOKEN kosong.`);
-        console.error(`Skrip perlu mengambil token, tapi variabel ini tidak diset di run.sh: ${missingKc.join(', ')}`);
-        console.error("Proses Patient Merge dibatalkan.");
+        consoleUtils.error(`AUTH_TYPE='bearer' dan BEARER_TOKEN kosong.`);
+        consoleUtils.error(`Skrip perlu mengambil token, tapi variabel ini tidak diset di run.sh: ${missingKc.join(', ')}`);
+        consoleUtils.error("Proses Patient Merge dibatalkan.");
         return;
     }
   }
@@ -296,13 +297,13 @@ async function runPatientMerge() {
   // Validasi kondisional (jika auth 'basic')
   if (AUTH_TYPE === 'basic') {
       if (!BASIC_USER || !BASIC_PASS) {
-          console.error(`❌ ERROR: AUTH_TYPE='basic', tapi BASIC_USER atau BASIC_PASS kosong di run.sh.`);
-          console.error("Proses Patient Merge dibatalkan.");
+          consoleUtils.error(`AUTH_TYPE='basic', tapi BASIC_USER atau BASIC_PASS kosong di run.sh.`);
+          consoleUtils.error("Proses Patient Merge dibatalkan.");
           return;
       }
   }
 
-  console.log("✅ Konfigurasi (Patient Merge) valid.");
+  consoleUtils.success("Konfigurasi (Patient Merge) valid.");
   
   await setupAuth();
 
@@ -310,10 +311,10 @@ async function runPatientMerge() {
   fs.mkdirSync(LOG_DIR, { recursive: true });
   const csvHeader = 'timestamp,patient_id,src_issuer,target_issuer,action,result\n';
   fs.writeFileSync(OPS_CSV, csvHeader);
-  console.log(`Logging operations to: ${OPS_CSV}`);
+  consoleUtils.info(`Logging operations to: ${OPS_CSV}`);
 
   // --- 1. Build PatientID -> Issuers map ---
-  console.log('Building PatientID -> issuers map...');
+  consoleUtils.info('Building PatientID -> issuers map...');
   const pidIssuersMap = new Map();
   const seen = new Set();
   let offset = 0;
@@ -323,13 +324,13 @@ async function runPatientMerge() {
     try {
       pageJson = await qidoPatientsPage(offset);
     } catch (err) {
-      console.error(`ERROR: Failed to fetch patient page at offset ${offset}.`, err.response?.data || err.message);
+      consoleUtils.error(`Failed to fetch patient page at offset ${offset}: ${err.response?.data || err.message}`);
       break;
     }
 
     if (!Array.isArray(pageJson) || pageJson.length === 0) {
-      console.log('No more patients found.');
-      break; 
+      consoleUtils.info('No more patients found.');
+      break;
     }
 
     for (const patient of pageJson) {
@@ -348,16 +349,16 @@ async function runPatientMerge() {
         pidIssuersMap.get(pid).add(issuer);
         
       } catch (e) {
-        console.warn('Skipping malformed patient record:', patient);
+        consoleUtils.warn('Skipping malformed patient record:', patient);
       }
     }
     offset += LIMIT;
   }
-  
-  console.log(`Found ${pidIssuersMap.size} unique PatientIDs.`);
+
+  consoleUtils.info(`Found ${pidIssuersMap.size} unique PatientIDs.`);
 
   // --- 2. Merge per PID into canonical issuer ---
-  console.log(`Merging per PID into canonical issuer ${CANON}...`);
+  consoleUtils.info(`Merging per PID into canonical issuer ${CANON}...`);
 
   for (const [pid, issuersSet] of pidIssuersMap.entries()) {
     const issuers = Array.from(issuersSet);
@@ -365,20 +366,20 @@ async function runPatientMerge() {
     if (issuers.length === 1 && issuers[0] === CANON) {
       continue;
     }
-    console.log(`Processing PID ${pid} with issuers: [${issuers.join(', ')}]`);
+    consoleUtils.status(`Processing PID ${pid} with issuers: [${issuers.join(', ')}]`);
 
     // 1. Cek: Apakah hanya ada 1 issuer DAN itu adalah <empty>? (Kasus HTTP 409)
     if (issuers.length === 1 && !issuers[0]) {
         if (!DRY_RUN) {
-            console.warn(`  [SKIP/409] Hanya ada issuer <empty>. Server akan menolak (409). Dilewatkan untuk diatasi di SQL Cleanup.`);
+            consoleUtils.warn(`  [SKIP/409] Hanya ada issuer <empty>. Server akan menolak (409). Dilewatkan untuk diatasi di SQL Cleanup.`);
             const now = new Date().toISOString();
             // Log ke CSV sebagai 409 SKIP
             const logLine = `${now},${pid},<empty>,${CANON},merge,SKIP_409_EMPTY\n`;
             fs.appendFileSync(OPS_CSV, logLine);
-            continue; 
+            continue;
         }
     }
-    
+
     let seed = issuers.find(iss => iss === CANON);
     if (!seed) {
       seed = issuers.find(iss => iss && iss !== CANON && iss !== 'DCM4CHEE.null.null');
@@ -392,7 +393,7 @@ async function runPatientMerge() {
     // 2. Cek: Apakah data Demografi kosong? (Kasus HTTP 500)
     if (!demo.name && !demo.dob && !demo.sex) {
         if (!DRY_RUN) { // Hanya skip di mode LIVE (untuk mencegah 500)
-            console.warn(` [SKIP/500] Demografi kosong. Melewatkan merge untuk menghindari server crash (NPE).`);
+            consoleUtils.warn(` [SKIP/500] Demografi kosong. Melewatkan merge untuk menghindari server crash (NPE).`);
             // Tambahkan logging ERR_SKIPPED_NO_DEMO ke CSV di sini
             const now = new Date().toISOString();
             const logLine = `${now},${pid},[${issuers.join(';')}],${CANON},merge,SKIP_500_NO_DEMO\n`;
@@ -400,32 +401,32 @@ async function runPatientMerge() {
             continue; // Lanjut ke pasien berikutnya
         }
     }
-    
+
     const payload = buildPayload(pid, demo.name, demo.dob, demo.sex);
-    
+
     if (seed !== CANON) {
-      console.log(`  Merging seed '${seed || '<empty>'}' -> ${CANON}`);
+      consoleUtils.info(`  Merging seed '${seed || '<empty>'}' -> ${CANON}`);
       await doMerge(pid, seed, payload);
     }
 
     for (const iss of issuers) {
-      
+
       if (iss === seed && seed !== CANON) continue;
       if (iss === CANON) continue;
 
       if (!iss) { // Jika 'iss' adalah string kosong atau null
         continue; // Lanjut ke issuer berikutnya
       }
-      
-      console.log(`  Merging variant '${iss || '<empty>'}' -> ${CANON}`);
+
+      consoleUtils.info(`  Merging variant '${iss || '<empty>'}' -> ${CANON}`);
       await doMerge(pid, iss, payload);
     }
   }
 
-  console.log(`Done. Log: ${OPS_CSV}`);
+  consoleUtils.success(`Done. Log: ${OPS_CSV}`);
   if (DRY_RUN) {
-    console.log('[INFO] Ini adalah DRY RUN. Tidak ada data yang diubah.');
-    console.log(`[INFO] Cek operasinya di: ${OPS_CSV}`);
+    consoleUtils.warn('Ini adalah DRY RUN. Tidak ada data yang diubah.');
+    consoleUtils.info(`Cek operasinya di: ${OPS_CSV}`);
   }
 }
 

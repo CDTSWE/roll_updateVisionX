@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { URLSearchParams } = require("url");
+const consoleUtils = require("../utils/consoleUtils");
 
 // =================== CONFIG ===================
 const FHIR_BASE = process.env.FHIR_BAS;
@@ -51,7 +52,7 @@ if (CURL_INSECURE) {
 function log(msg) {
   const timestamp = new Date().toISOString();
   const logMsg = `[${timestamp}] ${msg}`;
-  console.log(logMsg);
+  consoleUtils.info(logMsg);
   fs.appendFileSync(LOG_FILE, logMsg + "\n");
 }
 
@@ -1277,7 +1278,7 @@ async function main() {
 
 // Run the script
 main().catch((err) => {
-  log(`❌ CRITICAL ERROR: ${err.message}`);
-  console.error(err);
+  log(`CRITICAL ERROR: ${err.message}`);
+  consoleUtils.error(err.message);
   process.exit(1);
 });
