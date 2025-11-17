@@ -1,7 +1,7 @@
 // src/index.js (SUDAH DIPERBAIKI)
 
 const env = require("./config/env");
-const SSHAdapter = require("./adapters/sshAdapter");
+const LocalAdapter = require("./adapters/localAdapter");
 const DBAdapter = require("./adapters/dbAdapter");
 const MirthAdapter = require("./adapters/mirthAdapter");
 const deployYamlFiles = require("./usecases/deployYamlFiles");
@@ -27,7 +27,7 @@ async function main() {
 
     try {
       consoleUtils.title("Konfigurasi Proses Deployment");
-      runSsh = await ask.ask("Jalankan proses SSH? (y/n) ");
+      runSsh = await ask.ask("Jalankan proses Update Image? (y/n) ");
       runDb = await ask.ask("Jalankan proses Database? (y/n) ");
       runMirth = await ask.ask("Jalankan proses Mirth? (y/n) ");
       runRecount = await ask.ask(
@@ -47,7 +47,7 @@ async function main() {
 
     // --- Proses SSH ---
     if (runSsh.toLowerCase() === "y") {
-      consoleUtils.section("LOCAL Process (No SSH)");
+      consoleUtils.section("Update Image Process (No SSH)");
       const local = new LocalAdapter(env);
       await local.connect(); // does nothing
       await deployYamlFiles(local, env);

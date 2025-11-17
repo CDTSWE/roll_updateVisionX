@@ -13,7 +13,8 @@ function execCommand(command) {
 
 class LocalAdapter {
   constructor(config) {
-    this.remoteBasePath = config.LOCAL_BASE_PATH || "./visionx/poc-update";
+    this.remoteBasePath =
+      config.LOCAL_BASE_PATH || "/home/klbfadmin/installation-file/visionx";
   }
 
   async connect() {
@@ -39,7 +40,7 @@ class LocalAdapter {
       consoleUtils.info(`Current version: ${result.stdout}`);
 
       const answer = await askHelper.ask(
-        `Do you want to update ${remoteFilename} image? (y/n) `
+        `Do you want to update ${remoteFilename} image? (y/n) `,
       );
       if (answer.toLowerCase() === "n") {
         consoleUtils.skipped("Skipped");
@@ -47,7 +48,7 @@ class LocalAdapter {
       }
 
       const newVersion = await askHelper.ask(
-        `Enter the image version to update (x.x.x): `
+        `Enter the image version to update (x.x.x): `,
       );
 
       // Build sed command
@@ -60,7 +61,7 @@ class LocalAdapter {
       consoleUtils.success(`Updated image version → ${newVersion}`);
 
       const deployAnswer = await askHelper.ask(
-        `Deploy ${remoteFilename} now? (y/n): `
+        `Deploy ${remoteFilename} now? (y/n): `,
       );
 
       if (deployAnswer.toLowerCase() === "y") {
