@@ -90,6 +90,43 @@ or
 ./run.sh
 ```
 
+Then you will prompted for which process you want to run
+
+```
+// Update image in yaml file
+Jalankan proses Update Image? (y/n) 
+
+// Update Supabase RPC & Table
+Jalankan proses Database? (y/n) 
+
+// Update Mirth Script
+Jalankan proses Mirth? (y/n) n
+
+// Clean Number of Instancce
+Jalankan proses Cleaner (Recount Instances)? (y/n) 
+
+// Clean Multiple Patient ID
+Jalankan proses Cleaner (Patient Merge LENGKAP - PACS & DB)? (y/n) 
+```
+
+Update image process will look like this
+
+```
+{
+  stdout: '        image: kalbedevops.azurecr.io/elvasoft-ris:1\n',
+  stderr: ''
+}
+[INFO] Current version: image: kalbedevops.azurecr.io/elvasoft-ris:1
+
+Do you want to update ris.yaml image? (y/n) y
+
+// Example
+Enter the image version to update (x.x.x): 12.2.1 
+✅ Updated image version → 12.2.1
+
+Deploy ris.yaml now? (y/n): y
+```
+
 After the main update process, you will be prompted to run the MWL status cleaning script:
 
 ```
