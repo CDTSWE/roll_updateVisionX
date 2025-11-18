@@ -32,6 +32,7 @@ In the `run.sh` file, set the following environment variables:
 - `SUPABASE_PORT`: Your Supabase port (default: 5432)
 - `SUPABASE_USER`: Your Supabase username
 - `SUPABASE_PASSWORD`: Your Supabase password
+- The URL must point to the correct `SUPABASE_URL` and `SUPABASE_KEY`, which can be obtained from the Supabase Dashboard → API Docs
 
 These values can be obtained from your self-hosted Supabase `.env` or YAML configuration.
 
@@ -45,7 +46,6 @@ Configure Mirth settings based on your environment:
 
 - **Default port**: 8443
 - **Destination connector**: Only the URL usually needs to be updated
-- The URL must point to the correct `SUPABASE_URL` and `SUPABASE_KEY`, which can be obtained from the Supabase Dashboard → API Docs
 
 Key configuration variables include:
 - `MIRTH_HOST`: Mirth server address
