@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const consoleUtils = require("../utils/consoleUtils");
 
 async function updateMirthChannel(mirthAdapter) {
   const channelName = "mirth-vision";
@@ -16,18 +17,18 @@ async function updateMirthChannel(mirthAdapter) {
   const channelId = await mirthAdapter.getChannelIdByName(channelName);
   if (channelId) {
     await mirthAdapter.deleteChannel(channelId);
-    console.log(`✅ Deleted old channel: ${channelName}`);
+    consoleUtils.success(`Deleted old channel: ${channelName}`);
   }
 
   // Import new (with env-modified hosts)
   const modifiedXml = await mirthAdapter.modifyChannelXml(newXmlPath);
   await mirthAdapter.importChannel(modifiedXml);
-  console.log("✅ Imported new channel");
+  consoleUtils.success("Imported new channel");
 
   // Deploy
   const deployXml = fs.readFileSync(deployXmlPath, "utf8");
   await mirthAdapter.deployChannels(deployXml);
-  console.log("✅ Deployed channel");
+  consoleUtils.success("Deployed channel");
 }
 
 module.exports = updateMirthChannel;

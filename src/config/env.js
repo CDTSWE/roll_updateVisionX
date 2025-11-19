@@ -1,11 +1,8 @@
 require("dotenv").config();
 
 const env = {
-  // SSH
-  SSH_HOST: process.env.SSH_HOST,
-  SSH_PORT: parseInt(process.env.SSH_PORT, 10) || 22,
-  SSH_USER: process.env.SSH_USER,
-  SSH_PASSWORD: process.env.SSH_PASSWORD,
+  // Local Base Path
+  LOCAL_BASE_PATH: process.env.LOCAL_BASE_PATH,
 
   // Image Version
   RIS_IMAGE_VERSION: process.env.RIS_IMAGE_VERSION,
@@ -45,12 +42,13 @@ const env = {
   PROCEDURE_HTTP_SENDER: process.env.PROCEDURE_HTTP_SENDER,
   SEND_AUDIT_LOG: process.env.SEND_AUDIT_LOG,
   SEND_AUDIT_TRAIL: process.env.SEND_AUDIT_TRAIL,
-  KEYCLOAK_PASSWORD: process.env.KEYCLOAK_PASSWORD,
+  KC_PASSWORD: process.env.KC_PASSWORD,
+  KC_USERNAME: process.env.KC_USERNAME,
   // ... (add all others)
 };
 
 // Validate required env vars (optional but recommended)
-const required = ["SSH_HOST", "SSH_USER", "SUPABASE_HOST", "MIRTH_HOST"];
+const required = ["SUPABASE_HOST", "MIRTH_HOST"];
 for (const key of required) {
   if (!env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);

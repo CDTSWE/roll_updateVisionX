@@ -3,7 +3,7 @@
   <nextMetaDataId>19</nextMetaDataId>
   <name>mirth-vision</name>
   <description></description>
-  <revision>4</revision>
+  <revision>17</revision>
   <sourceConnector version="4.5.2">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -1620,6 +1620,8 @@ if (checkAccession) {
        trail_audit.user_id = user_id;
        trail_audit.username = username;
        log_audit.action =&quot;Processed Study&quot;;
+       var FhirId = UpdatedAccessionNumber
+       channelMap.put(&apos;FhirId&apos;, FhirId);
    } else {
        channelMap.put(&apos;no_service&apos;, true); // Study does not exist in MWL -&gt; send procedure and service request
        study.status = &quot;unknown&quot;; 
@@ -1631,7 +1633,7 @@ if (checkAccession) {
 		study.identifier = [
 		    {
 		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		        &quot;value&quot;: (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;)
 		    },
 		    {
 		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
@@ -1642,14 +1644,14 @@ if (checkAccession) {
 		serviceRequest.identifier = [
 		    {
 		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		        &quot;value&quot;: (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;)
 		    }
 		];
 		
 		procedure.identifier = [
 		    {
 		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/accession&quot;,
-		        &quot;value&quot;: accessionNumber + &quot;-unscheduled&quot;
+		        &quot;value&quot;: (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;)
 		    },
 		    {
 		        &quot;system&quot;: &quot;http://hospital.smarthealth.org/study-id&quot;,
@@ -1657,9 +1659,13 @@ if (checkAccession) {
 		    }
 		];
 	  channelMap.put(&apos;UpdatedAccessionNumber&apos;, accessionNumber + &quot;-unscheduled&quot;);
-	  study.id = accessionNumber + &quot;-unscheduled&quot;;
-	  serviceRequest.id = accessionNumber + &quot;-unscheduled&quot;;
-	  procedure.id = accessionNumber + &quot;-unscheduled&quot;;
+	  study.id = (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;);
+	  serviceRequest.id = (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;);
+	  procedure.id = (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;);
+	  // Create sanitized FHIR id (replace spaces only)
+	  var FhirId = (accessionNumber + &quot;-unscheduled&quot;).split(&quot; &quot;).join(&quot;_&quot;);
+	  // Store it
+	  channelMap.put(&apos;FhirId&apos;, FhirId);
 	  var accessionSupabase = &quot;eq.&quot; + accessionNumber + &quot;-unscheduled&quot;;
 	  channelMap.put(&apos;accessionSupabase&apos;, accessionSupabase); 
    }
@@ -1671,6 +1677,8 @@ if (checkAccession) {
        trail_audit.user_id = &quot;PACS&quot;;
        trail_audit.username = &quot;PACS&quot;;
        log_audit.action =&quot;Unscheduled Study&quot;;
+       var FhirId = UpdatedAccessionNumber
+       channelMap.put(&apos;FhirId&apos;, FhirId);
 
 		study.identifier = [
 		    {
@@ -2509,7 +2517,7 @@ return true;</script>
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ImagingStudy/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ImagingStudy/${FhirId}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2674,7 +2682,7 @@ if ( nostudy == true ) {&#xd;	var observation = JSON.parse($(&apos;fhir_study&ap
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ServiceRequest/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/ServiceRequest/${FhirId}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -2862,7 +2870,7 @@ if ( nostudy == true &amp;&amp; noservice == true) {&#xd;	return noMWL;	&#xd;
           <queueBufferSize>1000</queueBufferSize>
           <reattachAttachments>true</reattachAttachments>
         </destinationConnectorProperties>
-        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/Procedure/${UpdatedAccessionNumber}</host>
+        <host>http://10.0.0.11/elvasoft/fhir/4_0_0/Procedure/${FhirId}</host>
         <useProxyServer>false</useProxyServer>
         <proxyAddress></proxyAddress>
         <proxyPort></proxyPort>
@@ -3399,8 +3407,8 @@ return;</undeployScript>
     <metadata>
       <enabled>true</enabled>
       <lastModified>
-        <time>1761209329364</time>
-        <timezone>Asia/Jakarta</timezone>
+        <time>1763526078313</time>
+        <timezone>Asia/Bangkok</timezone>
       </lastModified>
       <pruningSettings>
         <archiveEnabled>true</archiveEnabled>
@@ -3414,7 +3422,7 @@ return;</undeployScript>
         <name>Library 1</name>
         <revision>1</revision>
         <lastModified>
-          <time>1761104884001</time>
+          <time>1760367060656</time>
           <timezone>Asia/Jakarta</timezone>
         </lastModified>
         <description></description>
@@ -3429,16 +3437,16 @@ return;</undeployScript>
             <name>Moment.js</name>
             <revision>1</revision>
             <lastModified>
-              <time>1761104884149</time>
+              <time>1760367060836</time>
               <timezone>Asia/Jakarta</timezone>
             </lastModified>
             <contextSet>
               <delegate>
-                <contextType>DESTINATION_DISPATCHER</contextType>
-                <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
+                <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
                 <contextType>SOURCE_RECEIVER</contextType>
                 <contextType>DESTINATION_RESPONSE_TRANSFORMER</contextType>
-                <contextType>SOURCE_FILTER_TRANSFORMER</contextType>
+                <contextType>DESTINATION_DISPATCHER</contextType>
+                <contextType>DESTINATION_FILTER_TRANSFORMER</contextType>
               </delegate>
             </contextSet>
             <properties class="com.mirth.connect.model.codetemplates.BasicCodeTemplateProperties">

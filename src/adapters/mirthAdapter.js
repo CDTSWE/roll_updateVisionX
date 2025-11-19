@@ -109,7 +109,9 @@ class MirthAdapter {
         conn.properties[0].host[0] = hostMap[id];
         if (id === "7") {
           conn.properties[0].parameters[0].entry[3].list[0].string[0] =
-            this.config.KEYCLOAK_PASSWORD;
+            this.config.KC_PASSWORD;
+          conn.properties[0].parameters[0].entry[2].list[0].string[0] =
+            this.config.KC_USERNAME;
         }
       }
     }

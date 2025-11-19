@@ -13,7 +13,8 @@ const {
 const DRY_RUN = (process.env.DRY_RUN || 'true') === 'true';
 
 // Helper logging
-const log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`);
+const consoleUtils = require('../utils/consoleUtils');
+const log = (msg) => consoleUtils.info(`[${new Date().toISOString()}] ${msg}`);
 
 /**
  * Helper untuk mencari Study Instance UID di dalam JSON
@@ -149,27 +150,23 @@ async function updateSupabaseCount(studyUid, newCount) {
 /**
  * Fungsi Utama
  */
-async function main() {
+async function runRecount() {
     if (DRY_RUN) {
-        log("=========================================");
-        log("========= MEMULAI MODE DRY RUN ==========");
-        log("== TIDAK ADA DATA YANG AKAN DIUBAH ==");
-        log("=========================================");
+        consoleUtils.title("MEMULAI MODE DRY RUN");
+        consoleUtils.warn("TIDAK ADA DATA YANG AKAN DIUBAH");
     } else {
-        log("=========================================");
-        log("======== MEMULAI MODE EKSEKUSI ========");
-        log("== PERINGATAN! DATA AKAN DIUBAH! ==");
-        log("=========================================");
+        consoleUtils.title("MEMULAI MODE EKSEKUSI");
+        consoleUtils.warn("PERINGATAN! DATA AKAN DIUBAH!");
     }
 
     // 1. Dapatkan Token
     log("Mendapatkan Keycloak token...");
     const token = await getKeycloakToken();
     if (!token) {
-        log("❌ Gagal mendapatkan token, skrip berhenti.");
+        log("Gagal mendapatkan token, skrip berhenti.");
         return;
     }
-    log("✅ Token dcm4chee didapatkan.");
+    consoleUtils.success("Token dcm4chee didapatkan.");
 
     // 2. Dapatkan Studi Supabase
     log("Mengambil daftar studi dari Supabase...");
@@ -177,7 +174,7 @@ async function main() {
     try {
         studies = await getSupabaseStudies();
     } catch (error) {
-        log(`❌ ${error.message}. Cek SUPABASE_URL dan SUPABASE_KEY.`);
+        log(`${error.message}. Cek SUPABASE_URL dan SUPABASE_KEY.`);
         return;
     }
 
@@ -186,7 +183,7 @@ async function main() {
     let countMismatch = 0;
     let countError = 0;
 
-    log(`Ditemukan ${countTotal} studi. Memulai perbandingan...`);
+    consoleUtils.info(`Ditemukan ${countTotal} studi. Memulai perbandingan...`);
 
     for (let i = 0; i < studies.length; i++) {
         const study = studies[i];
@@ -194,65 +191,59 @@ async function main() {
         const sbCount = study.numberOfInstances || 0;
 
         let dcm_query_uid = findStudyInstanceUID(study.identifier);
-        
+
         if (!dcm_query_uid) {
-            log(`  [SKIP] Gagal menemukan Study UID di identifier untuk PK ${uid_pk}. Melewatkan...`);
+            log(`[SKIP] Gagal menemukan Study UID di identifier untuk PK ${uid_pk}. Melewatkan...`);
             countError++;
             continue;
         }
-        
-        log(`--- (${i + 1}/${countTotal}) Cek PK: ${uid_pk} ---`);
-        log(`  Querying dcm4chee with Study UID: ${dcm_query_uid}`); 
-        log(`  Supabase count: ${sbCount}`);
+
+        consoleUtils.status(`(${i + 1}/${countTotal}) Cek PK: ${uid_pk}`);
+        log(`Querying dcm4chee with Study UID: ${dcm_query_uid}`);
+        log(`Supabase count: ${sbCount}`);
 
         // Kirim Study UID yang diekstrak
         const dcmCount = await getDcmCount(dcm_query_uid, token);
 
         if (dcmCount === "error") {
-            log(`  [SKIP] Gagal mengambil count dari dcm4chee.`);
+            log(`[SKIP] Gagal mengambil count dari dcm4chee.`);
             countError++;
             continue;
         }
 
-        log(`  dcm4chee count: ${dcmCount}`);
+        log(`dcm4chee count: ${dcmCount}`);
 
         if (Number(sbCount) === Number(dcmCount)) {
-            log("  [OK] Jumlah sudah sesuai.");
+            consoleUtils.success("Jumlah sudah sesuai.");
             continue;
         }
 
-        log(`  [MISMATCH] Perlu update. Supabase=${sbCount}, dcm4chee=${dcmCount}`);
+        consoleUtils.warn(`Perlu update. Supabase=${sbCount}, dcm4chee=${dcmCount}`);
         countMismatch++;
 
         if (DRY_RUN) {
-            log("  [DRY-RUN] Melewatkan update.");
+            log("[DRY-RUN] Melewatkan update.");
         } else {
             // 4. Eksekusi Update
-            log("  [EXECUTE] Mengirim update ke Supabase...");
+            log("[EXECUTE] Mengirim update ke Supabase...");
             const httpStatus = await updateSupabaseCount(uid_pk, dcmCount);
             if (httpStatus === 200 || httpStatus === 204) {
-                log(`  [SUCCESS] Update berhasil (HTTP ${httpStatus}).`);
+                consoleUtils.success(`Update berhasil (HTTP ${httpStatus}).`);
             } else {
-                log(`  [ERROR] Update GAGAL (HTTP ${httpStatus}).`);
+                log(`[ERROR] Update GAGAL (HTTP ${httpStatus}).`);
                 countError++;
             }
         }
     }
 
-    log("=========================================");
-    log("PROSES RECOUNT SELESAI");
-    log(`  Total Studi dicek: ${countTotal}`);
-    log(`  Mismatch (perlu update): ${countMismatch}`);
-    log(`  Gagal diproses: ${countError}`);
-    log("=========================================");
+    consoleUtils.title("PROSES RECOUNT SELESAI");
+    consoleUtils.info(`Total Studi dicek: ${countTotal}`);
+    consoleUtils.info(`Mismatch (perlu update): ${countMismatch}`);
+    consoleUtils.info(`Gagal diproses: ${countError}`);
     if (DRY_RUN && countMismatch > 0) {
-        log("Ini adalah DRY RUN. Tidak ada data yang diubah.");
-        log("Untuk eksekusi, set DRY_RUN=false di file run.sh");
+        consoleUtils.warn("Ini adalah DRY RUN. Tidak ada data yang diubah.");
+        consoleUtils.info("Untuk eksekusi, set DRY_RUN=false di file run.sh");
     }
 }
 
-// Menjalankan skrip
-main().catch(err => {
-    log(`❌ ERROR KRITIS: ${err.message}`);
-    process.exit(1);
-});
+module.exports = runRecount;
