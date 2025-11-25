@@ -44,7 +44,39 @@ const api = axios.create();
 
 function normalizeIssuer(issuer) {
   // Only treat truly empty/null as empty; keep `.null` suffixes so we can merge them explicitly
-  if (!issuer) return '';
+  if (!issuer) return "";
+
+  if (typeof issuer === "string") {
+    // Check if issuer has the pattern ending with .null
+    if (issuer.toLowerCase().endsWith(".null")) {
+      // Handle cases like "DCM4CHEE.xxx.null"
+      if (issuer.toLowerCase().startsWith("dcm4chee.")) {
+        return "elvasoft";
+      }
+
+      // Handle cases like "^^^DCM4CHEE.xxx.null" (just the issuer part after ^^^)
+      if (issuer.toLowerCase().startsWith("^^^dcm4chee.")) {
+        return "^^^elvasoft";
+      }
+
+      // Handle cases like "prefix^^^DCM4CHEE.xxx.null"
+      const prefixMatch = issuer.match(/^(.+)\^\^\^(DCM4CHEE\.[^.]*)\.null$/i);
+      if (prefixMatch) {
+        const prefix = prefixMatch[1]; // This captures the prefix before ^^^
+        return prefix + "^^^elvasoft";
+      }
+
+      // Handle cases like "04.18.26DCM4CHEE.E016EE26.null" where there's no separator
+      const directMatch = issuer.match(/^(.*?)(DCM4CHEE\.[^.]*)\.null$/i);
+      if (directMatch) {
+        const prefix = directMatch[1]; // This captures any prefix before DCM4CHEE
+        return prefix + "elvasoft";
+      }
+
+      // If it's just ending with .null but not in DCM4CHEE format, return empty string
+      return "";
+    }
+  }
   return issuer;
 }
 
@@ -224,13 +256,117 @@ function buildPayload(pid, name, dob, sex) {
 }
 
 /**
+ * Performs the direct update operation for patient issuer (or simulates if DRY_RUN).
+ */
+async function doDirectUpdate(pid, originalIssuer, payload) {
+  const pathPid = urlencode(pid);
+  const originalIssuerStr = originalIssuer || '<empty>';
+  const url = `${DCM_BASE}/${DCM_AET}/rs/patients/${pathPid}`;
+
+  const now = new Date().toISOString();
+
+  if (DRY_RUN) {
+    consoleUtils.info(`[DRY] PUT ${url}`);
+    consoleUtils.info(`[DRY] DATA: ${JSON.stringify(payload)}`);
+    const logLine = `${now},${pid},${originalIssuerStr},${CANON},direct_update,DRY_RUN\n`;
+    fs.appendFileSync(OPS_CSV, logLine);
+    return;
+  }
+
+  try {
+    const response = await api.put(url, payload, {
+      headers: { 'Content-Type': 'application/dicom+json' },
+    });
+
+    // Success (2xx status)
+    const logLine = `${now},${pid},${originalIssuerStr},${CANON},direct_update,${response.status}\n`;
+    fs.appendFileSync(OPS_CSV, logLine);
+
+    consoleUtils.success(`Direct update successful for ${pid} from '${originalIssuerStr}' to '${CANON}'`);
+
+  } catch (err) {
+    // Failure (non-2xx status)
+    const httpCode = err.response?.status || 'ERR_NO_RESPONSE';
+    const body = err.response?.data || err.message;
+    consoleUtils.warn(`Direct update failed for ${pid} ${originalIssuerStr} -> ${CANON}, HTTP ${httpCode}`);
+
+    const logLine = `${now},${pid},${originalIssuerStr},${CANON},direct_update,ERR_${httpCode}\n`;
+    fs.appendFileSync(OPS_CSV, logLine);
+
+    const errLogFile = path.join(LOG_DIR, `err_${pid}_${originalIssuer || 'EMPTY'}_${now.replace(/:/g, '-')}.log`);
+    fs.writeFileSync(errLogFile, typeof body === 'object' ? JSON.stringify(body, null, 2) : String(body));
+  }
+}
+
+/**
+ * Final cleanup function to get all DCM4CHEE records and individually update them
+ */
+async function finalCleanupDcm4cheeNullIssuers() {
+  // First, let's get all patients with DCM4CHEE issuers through a broader query
+  let offset = 0;
+  const processedPatients = new Set(); // Track to avoid duplicate processing
+
+  while (true) {
+    let pageJson;
+    try {
+      // Query for all patients, we'll filter for DCM4CHEE issuers in the response
+      const url = `${DCM_BASE}/${DCM_AET}/rs/patients?includefield=all&offset=${offset}&limit=${LIMIT}`;
+      const response = await api.get(url);
+      pageJson = response.data;
+    } catch (err) {
+      consoleUtils.error(`Failed to fetch patients page at offset ${offset} for final cleanup: ${err.response?.data || err.message}`);
+      break;
+    }
+
+    if (!Array.isArray(pageJson) || pageJson.length === 0) {
+      consoleUtils.info('No more patients found for final cleanup.');
+      break;
+    }
+
+    // Process each patient found
+    for (const patient of pageJson) {
+      try {
+        const pid = patient['00100020']?.Value[0];
+        const rawIssuer = patient['00100021']?.Value?.[0];
+
+        if (!pid || !rawIssuer) continue;
+
+        // Check if issuer contains DCM4CHEE and ends with .null
+        if (rawIssuer.toLowerCase().includes('dcm4chee') && rawIssuer.toLowerCase().endsWith('.null')) {
+          if (processedPatients.has(`${pid}|${rawIssuer}`)) continue;
+
+          processedPatients.add(`${pid}|${rawIssuer}`);
+
+          consoleUtils.status(`Final cleanup: Processing DCM4CHEE patient: ${pid}^^^${rawIssuer}`);
+
+          // Get the patient demographic data from the patient record
+          const name = patient['00100010']?.Value?.[0]?.Alphabetic || '';
+          const dob = patient['00100030']?.Value?.[0] || '';
+          const sex = patient['00100040']?.Value?.[0] || '';
+
+          // Create payload with current data but updated issuer
+          const payload = buildPayload(pid, name, dob, sex);
+
+          // Use direct update to avoid merge conflicts
+          await doDirectUpdate(pid, rawIssuer, payload);
+        }
+      } catch (e) {
+        consoleUtils.warn('Error processing patient in final cleanup:', e.message);
+      }
+    }
+
+    offset += LIMIT;
+  }
+}
+
+/**
  * Performs the merge operation (or simulates if DRY_RUN).
  */
 async function doMerge(pid, srcIssuer, payload) {
   let url;
   const pathPid = urlencode(pid);
   const srcIssuerStr = srcIssuer || '<empty>';
-  
+
   if (!srcIssuer) {
     url = `${DCM_BASE}/${DCM_AET}/rs/patients/${pathPid}?merge=true`;
   } else {
@@ -239,7 +375,7 @@ async function doMerge(pid, srcIssuer, payload) {
   }
 
   const now = new Date().toISOString();
-  
+
   if (DRY_RUN) {
     consoleUtils.info(`[DRY] PUT ${url}`);
     consoleUtils.info(`[DRY] DATA: ${JSON.stringify(payload)}`);
@@ -252,7 +388,7 @@ async function doMerge(pid, srcIssuer, payload) {
     const response = await api.put(url, payload, {
       headers: { 'Content-Type': 'application/dicom+json' },
     });
-    
+
     // Success (2xx status)
     const logLine = `${now},${pid},${srcIssuerStr},${CANON},merge,${response.status}\n`;
     fs.appendFileSync(OPS_CSV, logLine);
@@ -410,22 +546,24 @@ async function runPatientMerge() {
 
     const payload = buildPayload(pid, name, dob, sex);
 
-    if (seed !== CANON) {
-      consoleUtils.info(`  Merging seed '${seed || '<empty>'}' -> ${CANON}`);
-      await doMerge(pid, seed, payload);
-    }
-
+    // For issuers that are DCM4CHEE type, use direct update instead of merge to avoid merge conflicts
+    // This approach works for updating the issuer from DCM4CHEE formats to elvasoft directly
     for (const iss of issuers) {
-
-      if (iss === seed && seed !== CANON) continue;
       if (iss === CANON) continue;
 
       if (!iss) { // Jika 'iss' adalah string kosong atau null
         continue; // Lanjut ke issuer berikutnya
       }
 
-      consoleUtils.info(`  Merging variant '${iss || '<empty>'}' -> ${CANON}`);
-      await doMerge(pid, iss, payload);
+      // Check if this is a DCM4CHEE issuer (contains DCM4CHEE) - use direct update
+      if (iss.toLowerCase().includes('dcm4chee')) {
+        consoleUtils.info(`  Direct updating patient ${pid} from '${iss}' -> ${CANON}`);
+        await doDirectUpdate(pid, iss, payload);
+      } else {
+        // For non-DCM4CHEE issuers, use the traditional merge approach
+        consoleUtils.info(`  Merging variant '${iss || '<empty>'}' -> ${CANON}`);
+        await doMerge(pid, iss, payload);
+      }
     }
   }
 
@@ -434,6 +572,10 @@ async function runPatientMerge() {
     consoleUtils.warn('Ini adalah DRY RUN. Tidak ada data yang diubah.');
     consoleUtils.info(`Cek operasinya di: ${OPS_CSV}`);
   }
+
+  // Final cleanup: Process any remaining DCM4CHEE records with .null issuers
+  consoleUtils.info('Starting final cleanup for any remaining DCM4CHEE .null issuers...');
+  await finalCleanupDcm4cheeNullIssuers();
 }
 
 
