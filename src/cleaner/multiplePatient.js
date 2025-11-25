@@ -42,6 +42,14 @@ const OPS_CSV = path.join(LOG_DIR, 'merged_ops.csv');
 // Global Axios instance for QIDO/merge calls
 const api = axios.create();
 
+function normalizeIssuer(issuer) {
+  if (!issuer) return '';
+  if (typeof issuer === 'string' && issuer.toLowerCase().endsWith('.null')) {
+    return '';
+  }
+  return issuer;
+}
+
 /**
  * Fetches the OIDC token if required.
  */
@@ -336,7 +344,8 @@ async function runPatientMerge() {
     for (const patient of pageJson) {
       try {
         const pid = patient['00100020']?.Value[0];
-        const issuer = patient['00100021']?.Value[0] ?? ''; 
+        const rawIssuer = patient['00100021']?.Value?.[0];
+        const issuer = normalizeIssuer(rawIssuer); 
 
         if (!pid) continue;
         const key = `${pid}|${issuer}`;
@@ -370,14 +379,7 @@ async function runPatientMerge() {
 
     // 1. Cek: Apakah hanya ada 1 issuer DAN itu adalah <empty>? (Kasus HTTP 409)
     if (issuers.length === 1 && !issuers[0]) {
-        if (!DRY_RUN) {
-            consoleUtils.warn(`  [SKIP/409] Hanya ada issuer <empty>. Server akan menolak (409). Dilewatkan untuk diatasi di SQL Cleanup.`);
-            const now = new Date().toISOString();
-            // Log ke CSV sebagai 409 SKIP
-            const logLine = `${now},${pid},<empty>,${CANON},merge,SKIP_409_EMPTY\n`;
-            fs.appendFileSync(OPS_CSV, logLine);
-            continue;
-        }
+        consoleUtils.warn(`  [WARN] Hanya ada issuer <empty>. Tetap akan dicoba merge ke ${CANON} untuk menghindari duplikasi PID.`);
     }
 
     let seed = issuers.find(iss => iss === CANON);
@@ -390,19 +392,21 @@ async function runPatientMerge() {
 
     const demo = await pickDemoForPid(pid);
 
-    // 2. Cek: Apakah data Demografi kosong? (Kasus HTTP 500)
-    if (!demo.name && !demo.dob && !demo.sex) {
-        if (!DRY_RUN) { // Hanya skip di mode LIVE (untuk mencegah 500)
-            consoleUtils.warn(` [SKIP/500] Demografi kosong. Melewatkan merge untuk menghindari server crash (NPE).`);
-            // Tambahkan logging ERR_SKIPPED_NO_DEMO ke CSV di sini
-            const now = new Date().toISOString();
-            const logLine = `${now},${pid},[${issuers.join(';')}],${CANON},merge,SKIP_500_NO_DEMO\n`;
-            fs.appendFileSync(OPS_CSV, logLine);
-            continue; // Lanjut ke pasien berikutnya
-        }
+    // Kirim hanya field yang tersedia; jika sebagian kosong, tetap lanjut dengan payload parsial
+    const name = (demo.name || '').trim();
+    const dob = (demo.dob || '').trim();
+    const sex = (demo.sex || '').trim();
+
+    const missingFields = [];
+    if (!name) missingFields.push('name');
+    if (!dob) missingFields.push('dob');
+    if (!sex) missingFields.push('sex');
+
+    if (missingFields.length > 0) {
+      consoleUtils.warn(`  Demografi parsial untuk ${pid}. Field kosong: ${missingFields.join(', ')}. Mengirim payload hanya dengan field yang ada.`);
     }
 
-    const payload = buildPayload(pid, demo.name, demo.dob, demo.sex);
+    const payload = buildPayload(pid, name, dob, sex);
 
     if (seed !== CANON) {
       consoleUtils.info(`  Merging seed '${seed || '<empty>'}' -> ${CANON}`);

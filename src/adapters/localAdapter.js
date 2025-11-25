@@ -97,7 +97,8 @@ class LocalAdapter {
         "\\$&",
       );
       const hasDashPrefix = originalLine.trimStart().startsWith("- ");
-      const replacement = `${hasDashPrefix ? "- " : ""}${imageVersion}${newVersion}`;
+      const indent = originalLine.match(/^\s*/)?.[0] || "";
+      const replacement = `${indent}${hasDashPrefix ? "- " : ""}${imageVersion}${newVersion}`;
       const sedCmd = `sed -i "s|${escapedOriginal}|${replacement}|g" ${this.remoteBasePath}/${remoteFilename}`;
 
       await execCommand(sedCmd);
