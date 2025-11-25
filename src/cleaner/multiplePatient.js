@@ -259,7 +259,8 @@ function buildPayload(pid, name, dob, sex) {
  * Performs the direct update operation for patient issuer (or simulates if DRY_RUN).
  */
 async function doDirectUpdate(pid, originalIssuer, payload) {
-  const pathPid = urlencode(pid);
+  // Use a safer URL encoding approach for special characters in patient ID
+  const pathPid = encodeURIComponent(pid);
   const originalIssuerStr = originalIssuer || '<empty>';
   const url = `${DCM_BASE}/${DCM_AET}/rs/patients/${pathPid}`;
 
@@ -333,6 +334,12 @@ async function finalCleanupDcm4cheeNullIssuers() {
 
         // Check if issuer contains DCM4CHEE and ends with .null
         if (rawIssuer.toLowerCase().includes('dcm4chee') && rawIssuer.toLowerCase().endsWith('.null')) {
+          // Only skip truly empty patient IDs
+          if (!pid || pid.trim() === '') {
+            consoleUtils.warn(`Skipping empty patient ID with issuer: ${rawIssuer}`);
+            continue;
+          }
+
           if (processedPatients.has(`${pid}|${rawIssuer}`)) continue;
 
           processedPatients.add(`${pid}|${rawIssuer}`);
