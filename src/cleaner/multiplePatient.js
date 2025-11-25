@@ -43,10 +43,8 @@ const OPS_CSV = path.join(LOG_DIR, 'merged_ops.csv');
 const api = axios.create();
 
 function normalizeIssuer(issuer) {
+  // Only treat truly empty/null as empty; keep `.null` suffixes so we can merge them explicitly
   if (!issuer) return '';
-  if (typeof issuer === 'string' && issuer.toLowerCase().endsWith('.null')) {
-    return '';
-  }
   return issuer;
 }
 
@@ -379,7 +377,11 @@ async function runPatientMerge() {
 
     // 1. Cek: Apakah hanya ada 1 issuer DAN itu adalah <empty>? (Kasus HTTP 409)
     if (issuers.length === 1 && !issuers[0]) {
-        consoleUtils.warn(`  [WARN] Hanya ada issuer <empty>. Tetap akan dicoba merge ke ${CANON} untuk menghindari duplikasi PID.`);
+        consoleUtils.warn(`  [SKIP/409] Hanya ada issuer <empty>. Server biasanya menolak (409). Dilewatkan; tangani via SQL cleanup.`);
+        const now = new Date().toISOString();
+        const logLine = `${now},${pid},<empty>,${CANON},merge,SKIP_EMPTY_ISSUER\n`;
+        fs.appendFileSync(OPS_CSV, logLine);
+        continue;
     }
 
     let seed = issuers.find(iss => iss === CANON);
