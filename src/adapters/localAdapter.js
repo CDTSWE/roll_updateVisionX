@@ -21,7 +21,8 @@ class LocalAdapter {
 
   async updateAndApplyFile(remoteFilename, imageVersion, askHelper) {
     try {
-      const grepCommand = `grep -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
+      // Limit to the first non-comment image line to avoid multi-line matches that break sed
+      const grepCommand = `grep -m1 -hE "^[[:space:]]*[^#].*image:" ${this.remoteBasePath}/${remoteFilename}`;
       let result;
       try {
         result = await execCommand(grepCommand);
@@ -70,9 +71,13 @@ class LocalAdapter {
         return;
       }
 
-      console.log(result);
+      const lines = result.stdout
+        .split(/\r?\n/)
+        .map((line) => line.trimEnd())
+        .filter((line) => line.length > 0);
+      const originalLine = lines[0] || "";
 
-      consoleUtils.info(`Current version: ${result.stdout.trim()}`);
+      consoleUtils.info(`Current version: ${originalLine}`);
 
       const answer = await askHelper.ask(
         `Do you want to update ${remoteFilename} image? (y/n) `,
@@ -87,13 +92,13 @@ class LocalAdapter {
         `Enter the image version to update (x.x.x): `,
       );
 
-      const escapedOriginal = result.stdout
-        .trim()
-        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      let sedCmd = `sed -i "s|${escapedOriginal}|${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
-      if (result.stdout.trim().startsWith("-")) {
-        sedCmd = `sed -i "s|${escapedOriginal}|- ${imageVersion}${newVersion}|g" ${this.remoteBasePath}/${remoteFilename}`;
-      }
+      const escapedOriginal = originalLine.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
+      const hasDashPrefix = originalLine.trimStart().startsWith("- ");
+      const replacement = `${hasDashPrefix ? "- " : ""}${imageVersion}${newVersion}`;
+      const sedCmd = `sed -i "s|${escapedOriginal}|${replacement}|g" ${this.remoteBasePath}/${remoteFilename}`;
 
       await execCommand(sedCmd);
       consoleUtils.success(`Updated image version → ${newVersion}`);
