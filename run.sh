@@ -89,11 +89,36 @@ export VERBOSE=false
 # ############################################
 # ############################################
 
+install_node() {
+  echo "Node.js not found. Attempting automatic installation via apt-get..."
+  echo "There is no Node.js available; installing Node.js 20.x..."
+
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get not available on this system. Please install Node.js manually."
+    exit 1
+  fi
+
+  SUDO=""
+  if [ "$(id -u)" -ne 0 ]; then
+    if command -v sudo >/dev/null 2>&1; then
+      SUDO="sudo "
+    else
+      echo "Root privileges or sudo are required to install Node.js automatically."
+      exit 1
+    fi
+  fi
+
+  ${SUDO}apt-get update
+  ${SUDO}apt-get install -y curl
+  curl -fsSL https://deb.nodesource.com/setup_20.x | ${SUDO}bash -
+  ${SUDO}apt-get install -y nodejs
+  echo "Node.js installation completed successfully."
+}
+
 
 update_image() {
   if ! command -v node &> /dev/null; then
-      echo "❌ Node.js not installed. Please install Node.js first."
-      exit 1
+      install_node
   fi
 
   if ! command -v npm &> /dev/null; then
